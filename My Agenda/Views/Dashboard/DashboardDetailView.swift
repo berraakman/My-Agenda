@@ -23,6 +23,9 @@ struct DashboardDetailView: View {
     let dashboard: Dashboard
     @Binding var selectedTask: AgendaTask?
     
+    @Query(sort: \Dashboard.sortIndex)
+    private var dashboards: [Dashboard]
+    
     // MARK: - State
     
     @State private var isShowingAddTask = false
@@ -85,6 +88,54 @@ struct DashboardDetailView: View {
                             task.toggleCompletion()
                         }
                         .tag(task)
+                        .contextMenu {
+                            Button {
+                                task.toggleCompletion()
+                            } label: {
+                                Label(
+                                    task.isCompleted ? "Geri Al" : "Tamamla",
+                                    systemImage: task.isCompleted ? "arrow.uturn.backward" : "checkmark"
+                                )
+                            }
+                            
+                            Button {
+                                selectedTask = task
+                            } label: {
+                                Label("Düzenle", systemImage: "pencil")
+                            }
+                            
+                            Menu {
+                                Button {
+                                    task.dashboard = nil
+                                } label: {
+                                    Text("Hiçbiri")
+                                }
+                                
+                                ForEach(dashboards) { d in
+                                    Button {
+                                        task.dashboard = d
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: d.icon)
+                                            Text(d.name)
+                                        }
+                                    }
+                                }
+                            } label: {
+                                Label("Taşı", systemImage: "folder")
+                            }
+                            
+                            Divider()
+                            
+                            Button(role: .destructive) {
+                                if selectedTask?.id == task.id {
+                                    selectedTask = nil
+                                }
+                                modelContext.delete(task)
+                            } label: {
+                                Label("Sil", systemImage: "trash")
+                            }
+                        }
                     }
                     .listStyle(.inset)
                 }

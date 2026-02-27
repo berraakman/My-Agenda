@@ -1,3 +1,4 @@
+
 //
 //  CalendarView.swift
 //  My Agenda
@@ -29,6 +30,8 @@ struct CalendarView: View {
     )
     private var pendingTasks: [AgendaTask]
     
+    @Binding var selectedTask: AgendaTask?
+    
     // MARK: - State
     
     @State private var selectedTab: CalendarTab = .weekly
@@ -45,10 +48,10 @@ struct CalendarView: View {
             // İçerik
             switch selectedTab {
             case .weekly:
-                WeeklyAgendaView()
+                WeeklyAgendaView(selectedTask: $selectedTask)
                 
             case .monthly:
-                MonthlyCalendarView()
+                MonthlyCalendarView(selectedTask: $selectedTask)
                 
             case .appleCalendar:
                 appleCalendarContent
@@ -86,118 +89,29 @@ struct CalendarView: View {
     
     private var appleCalendarContent: some View {
         Group {
-            if calendarService.isAuthorized {
-                VStack(spacing: 0) {
-                    // Toolbar
-                    HStack {
-                        Text("Apple Calendar Etkinlikleri")
-                            .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        
-                        Spacer()
-                        
-                        Button {
-                            isShowingTaskPicker = true
-                        } label: {
-                            Label("Görevi Takvime Ekle", systemImage: "calendar.badge.plus")
-                                .font(.system(size: 13))
-                        }
-                        
-                        Button {
-                            calendarViewModel?.loadEvents()
-                        } label: {
-                            Label("Yenile", systemImage: "arrow.clockwise")
-                                .font(.system(size: 13))
-                        }
-                    }
-                    .padding()
-                    
-                    Divider()
-                    
-                    if calendarService.isLoading {
-                        ProgressView("Yükleniyor...")
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if calendarService.events.isEmpty {
-                        EmptyStateView(
-                            icon: "calendar",
-                            title: "Etkinlik yok",
-                            message: "Apple Calendar'da bu dönem için etkinlik bulunamadı."
-                        )
-                    } else {
-                        List(calendarService.events, id: \.eventIdentifier) { event in
-                            CalendarEventRow(event: event)
-                        }
-                        .listStyle(.inset)
-                    }
-                }
-                .onAppear {
-                    calendarViewModel?.loadEvents()
-                }
-            } else {
-                // İzin isteme ekranı
-                VStack(spacing: 20) {
-                    Spacer()
-                    Image(systemName: "calendar.badge.exclamationmark")
-                        .font(.system(size: 48, weight: .light))
-                        .foregroundStyle(.secondary)
-                    
-                    Text("Takvim Erişimi Gerekli")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                    
-                    Text("Apple Calendar etkinliklerinizi görüntülemek için izin verin.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: 350)
-                    
-                    if calendarService.isAccessDenied {
-                        // İzin daha önce reddedilmiş — Sistem Tercihleri'ne yönlendir
-                        Text("İzin daha önce reddedilmiş. Sistem Tercihleri'nden etkinleştirebilirsiniz.")
-                            .font(.system(size: 13, design: .rounded))
-                            .foregroundStyle(.orange)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: 350)
-                        
-                        Button {
-                            calendarService.openSystemPreferences()
-                        } label: {
-                            Text("Sistem Tercihleri'ni Aç")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        
-                        Button {
-                            calendarService.updateAuthorizationStatus()
-                        } label: {
-                            Text("Tekrar Kontrol Et")
-                        }
-                        .buttonStyle(.bordered)
-                    } else {
-                        // İlk kez izin isteniyor
-                        Button {
-                            Task {
-                                let _ = await calendarService.requestAccess()
-                                calendarViewModel?.loadEvents()
-                            }
-                        } label: {
-                            Text("İzin Ver")
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                    
-                    if let error = calendarService.errorMessage {
-                        Text(error)
-                            .font(.system(size: 12, design: .rounded))
-                            .foregroundStyle(.red)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: 300)
-                    }
-                    
-                    Spacer()
-                }
-            }
+            AppleCalendarMonthlyView()
         }
         .sheet(isPresented: $isShowingTaskPicker) {
             taskPickerSheet
+        }
+        .toolbar {
+            if calendarService.isAuthorized && selectedTab == .appleCalendar {
+                ToolbarItemGroup(placement: .automatic) {
+                    Button {
+                        isShowingTaskPicker = true
+                    } label: {
+                        Label("Görevi Takvime Ekle", systemImage: "calendar.badge.plus")
+                    }
+                    .help("Görevi Takvime Ekle")
+                    
+                    Button {
+                        calendarViewModel?.loadEvents()
+                    } label: {
+                        Label("Yenile", systemImage: "arrow.clockwise")
+                    }
+                    .help("Yenile")
+                }
+            }
         }
     }
     
@@ -286,7 +200,7 @@ enum CalendarTab: String, CaseIterable, Identifiable {
 // MARK: - Preview
 
 #Preview {
-    CalendarView()
+    CalendarView(selectedTask: .constant(nil))
         .environment(CalendarService())
         .modelContainer(for: [Dashboard.self, AgendaTask.self], inMemory: true)
 }

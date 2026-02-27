@@ -56,7 +56,15 @@ final class AgendaTask {
     /// Sadece isRecurring == true ise anlamlıdır.
     var recurrenceType: RecurrenceType?
     
+    /// Hangi günlerde tekrarlanacağı (Örn: [2, 4] -> Pzt, Çar)
+    /// Calendar component mantığıyla Pazar=1, Pzt=2...
+    /// Sadece recurrenceType == .customDays ise anlamlıdır.
+    var recurringDaysOfWeek: [Int]?
+    
     // MARK: - Calendar Integration
+    
+    /// Görevin Apple Calendar'a eklenip eklenmeyeceği durumu
+    var addToCalendar: Bool = false
     
     /// Apple Calendar'daki etkinlik ID'si.
     /// Görev takvime eklendiyse bu değer dolu olur.
@@ -83,6 +91,8 @@ final class AgendaTask {
         dueTime: Date? = nil,
         isRecurring: Bool = false,
         recurrenceType: RecurrenceType? = nil,
+        recurringDaysOfWeek: [Int]? = nil,
+        addToCalendar: Bool = false,
         calendarEventId: String? = nil,
         dashboard: Dashboard? = nil
     ) {
@@ -97,6 +107,8 @@ final class AgendaTask {
         self.dueTime = dueTime
         self.isRecurring = isRecurring
         self.recurrenceType = recurrenceType
+        self.recurringDaysOfWeek = recurringDaysOfWeek
+        self.addToCalendar = addToCalendar
         self.calendarEventId = calendarEventId
         self.dashboard = dashboard
     }
@@ -129,6 +141,51 @@ final class AgendaTask {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.day], from: calendar.startOfDay(for: Date()), to: calendar.startOfDay(for: dueDate))
         return components.day
+    }
+    
+    /// Belirli bir tarihte bu görevin planlanıp planlanmadığını kontrol eder (tekrarlamaları hesaba katar).
+    func isScheduled(for targetDate: Date) -> Bool {
+        let calendar = Calendar.current
+        
+        // Eğer tekrarlayan görev DEĞİLSE, sadece dueDate'de (son tarihinde) göster
+        if !isRecurring {
+            guard let dueDate = dueDate else { return false }
+            return calendar.isDate(targetDate, inSameDayAs: dueDate)
+        }
+        
+        // TEKRARLAYAN GÖREV İÇİN
+        
+        let startOfTargetDate = calendar.startOfDay(for: targetDate)
+        let startOfCreatedAt = calendar.startOfDay(for: createdAt)
+        
+        // Eğer hedef tarih başlangıç (oluşturulma) tarihinden önceyse gösterme
+        if startOfTargetDate < startOfCreatedAt { return false }
+        
+        // Eğer kullanıcının girdiği bir 'Son Tarih' (dueDate) varsa, bu tekrarlamanın bitiş tarihi anlamına gelir.
+        if let dueDate = dueDate {
+            let startOfDueDate = calendar.startOfDay(for: dueDate)
+            // Eğer hedef tarih, son tarihi (bitiş tarihini) geçmişse durdur / gösterme
+            if startOfTargetDate > startOfDueDate { return false }
+        }
+        
+        guard let type = recurrenceType else { return false }
+        
+        switch type {
+        case .daily:
+            return true
+        case .weekly:
+            let diff = calendar.dateComponents([.day], from: startOfCreatedAt, to: startOfTargetDate).day ?? 0
+            return diff % 7 == 0
+        case .monthly:
+            let targetDay = calendar.component(.day, from: startOfTargetDate)
+            let createdDay = calendar.component(.day, from: startOfCreatedAt)
+            return targetDay == createdDay
+        case .customDays:
+            // Custom day için haftanın günlerini kontrol et: Pazar=1, Pzt=2...
+            guard let days = recurringDaysOfWeek, !days.isEmpty else { return false }
+            let targetWeekday = calendar.component(.weekday, from: startOfTargetDate)
+            return days.contains(targetWeekday)
+        }
     }
     
     /// Birleştirilmiş tarih ve saat bilgisi.

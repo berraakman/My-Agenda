@@ -14,6 +14,7 @@ enum RecurrenceType: String, Codable, CaseIterable, Identifiable {
     case daily = "Daily"
     case weekly = "Weekly"
     case monthly = "Monthly"
+    case customDays = "CustomDays"
     
     var id: String { rawValue }
     
@@ -22,9 +23,10 @@ enum RecurrenceType: String, Codable, CaseIterable, Identifiable {
     /// Türkçe görüntüleme adı
     var displayName: String {
         switch self {
-        case .daily:   return "Günlük"
-        case .weekly:  return "Haftalık"
-        case .monthly: return "Aylık"
+        case .daily:   return "Her Gün"
+        case .weekly:  return "Haftada Bir"
+        case .monthly: return "Ayda Bir"
+        case .customDays: return "Belirli Günler"
         }
     }
     
@@ -34,6 +36,7 @@ enum RecurrenceType: String, Codable, CaseIterable, Identifiable {
         case .daily:   return "arrow.clockwise.circle"
         case .weekly:  return "calendar.badge.clock"
         case .monthly: return "calendar.circle"
+        case .customDays: return "calendar.day.timeline.left"
         }
     }
     
@@ -51,6 +54,9 @@ enum RecurrenceType: String, Codable, CaseIterable, Identifiable {
             return calendar.date(byAdding: .weekOfYear, value: 1, to: date)
         case .monthly:
             return calendar.date(byAdding: .month, value: 1, to: date)
+        case .customDays:
+            // Custom days handle is manual in AgendaTask for now, just fallback to +1 day
+            return calendar.date(byAdding: .day, value: 1, to: date)
         }
     }
 }

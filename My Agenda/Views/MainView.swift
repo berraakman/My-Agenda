@@ -22,39 +22,40 @@ struct MainView: View {
     /// Detail panelinde seçili görev
     @State private var selectedTask: AgendaTask?
     
-    /// Sidebar görünürlük kontrolü
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
-    
     // MARK: - Body
     
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
+        // İki sütunlu yapı: Sol Menü + Ana İçerik
+        NavigationSplitView {
             
             // ════════════════════════════════════════
             // SIDEBAR (Sol Panel)
             // ════════════════════════════════════════
             SidebarView(selectedItem: $selectedSidebarItem)
-            
-        } content: {
-            
-            // ════════════════════════════════════════
-            // CONTENT (Orta Panel)
-            // ════════════════════════════════════════
-            contentView
+                .navigationSplitViewColumnWidth(min: 220, ideal: 260)
             
         } detail: {
             
             // ════════════════════════════════════════
-            // DETAIL (Sağ Panel)
+            // CONTENT (Orta Panel / Ana Alan)
             // ════════════════════════════════════════
-            detailView
+            contentView
+                // Inspector (Sağ Panel) — Sadece görev seçiliyken görünür
+                .inspector(isPresented: Binding(
+                    get: { selectedTask != nil },
+                    set: { if !$0 { selectedTask = nil } }
+                )) {
+                    if let task = selectedTask {
+                        TaskInlineEditor(task: task, selectedTask: $selectedTask)
+                            .inspectorColumnWidth(min: 280, ideal: 300, max: 400)
+                    }
+                }
         }
-        .navigationSplitViewStyle(.balanced)
         .frame(
             minWidth: AppConstants.minWindowWidth,
             minHeight: AppConstants.minWindowHeight
         )
-        // Sidebar seçimi değiştiğinde seçili görevi temizle
+        // Sidebar seçimi değiştiğinde seçili görevi temizle (ve yan paneli kapat)
         .onChange(of: selectedSidebarItem) { _, _ in
             selectedTask = nil
         }
@@ -62,7 +63,7 @@ struct MainView: View {
     
     // MARK: - Content View Builder
     
-    /// Sidebar seçimine göre orta panelde gösterilecek view
+    /// Sidebar seçimine göre ana alanda gösterilecek view
     @ViewBuilder
     private var contentView: some View {
         switch selectedSidebarItem {
@@ -79,7 +80,7 @@ struct MainView: View {
             DashboardDetailView(dashboard: dashboard, selectedTask: $selectedTask)
             
         case .calendar:
-            CalendarView()
+            CalendarView(selectedTask: $selectedTask)
             
         case .statistics:
             StatisticsView()
@@ -89,22 +90,6 @@ struct MainView: View {
                 icon: "sidebar.leading",
                 title: "Bir bölüm seçin",
                 message: "Başlamak için sol panelden bir dashboard veya bölüm seçin."
-            )
-        }
-    }
-    
-    // MARK: - Detail View Builder
-    
-    /// Seçili göreve göre sağ panelde gösterilecek view
-    @ViewBuilder
-    private var detailView: some View {
-        if let task = selectedTask {
-            TaskDetailView(task: task, selectedTask: $selectedTask)
-        } else {
-            EmptyStateView(
-                icon: "doc.text.magnifyingglass",
-                title: "Görev seçilmedi",
-                message: "Detaylarını görüntülemek için listeden bir görev seçin."
             )
         }
     }

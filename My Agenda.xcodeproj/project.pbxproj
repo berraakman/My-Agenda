@@ -394,6 +394,8 @@
 				DEVELOPMENT_ASSET_PATHS = "\"My Agenda/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Ajanda uygulamasında tam ve sorunsuz bir deneyim için takviminize tam erişim izni gereklidir.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "Etkinlikleri okumak ve yazmak için takviminize erişmemiz gerekiyor.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -431,6 +433,8 @@
 				DEVELOPMENT_ASSET_PATHS = "\"My Agenda/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Ajanda uygulamasında tam ve sorunsuz bir deneyim için takviminize tam erişim izni gereklidir.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "Etkinlikleri okumak ve yazmak için takviminize erişmemiz gerekiyor.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -464,6 +468,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Ajanda uygulamasında tam ve sorunsuz bir deneyim için takviminize tam erişim izni gereklidir.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "Etkinlikleri okumak ve yazmak için takviminize erişmemiz gerekiyor.";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
 				MARKETING_VERSION = 1.0;
@@ -486,6 +492,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Ajanda uygulamasında tam ve sorunsuz bir deneyim için takviminize tam erişim izni gereklidir.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "Etkinlikleri okumak ve yazmak için takviminize erişmemiz gerekiyor.";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
 				MARKETING_VERSION = 1.0;
@@ -507,6 +515,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Ajanda uygulamasında tam ve sorunsuz bir deneyim için takviminize tam erişim izni gereklidir.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "Etkinlikleri okumak ve yazmak için takviminize erişmemiz gerekiyor.";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
 				MARKETING_VERSION = 1.0;
@@ -528,6 +538,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Ajanda uygulamasında tam ve sorunsuz bir deneyim için takviminize tam erişim izni gereklidir.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "Etkinlikleri okumak ve yazmak için takviminize erişmemiz gerekiyor.";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
 				MARKETING_VERSION = 1.0;

@@ -7,7 +7,6 @@
 
 import Foundation
 import EventKit
-import AppKit
 
 // MARK: - CalendarService
 /// Apple Calendar (EventKit) entegrasyon servisi.
@@ -32,9 +31,6 @@ final class CalendarService {
     /// Yükleniyor mu?
     var isLoading = false
     
-    /// İzin reddedildi mi? (Sistem Tercihleri'ne yönlendirmek için)
-    var isAccessDenied = false
-    
     // MARK: - Init
     
     init() {
@@ -46,50 +42,35 @@ final class CalendarService {
     /// Mevcut izin durumunu günceller
     func updateAuthorizationStatus() {
         authorizationStatus = EKEventStore.authorizationStatus(for: .event)
-        isAccessDenied = (authorizationStatus == .denied || authorizationStatus == .restricted)
     }
     
-    /// Takvim erişim izni ister
-    @MainActor
+    /// Takvim erişim izni ister (macOS 14+ için FullAccess, daha eskiyse Event)
     func requestAccess() async -> Bool {
-        // Eğer daha önce reddedildiyse, Sistem Tercihleri'ne yönlendir
-        if authorizationStatus == .denied || authorizationStatus == .restricted {
-            isAccessDenied = true
-            openSystemPreferences()
-            return false
-        }
-        
         do {
-            let granted = try await eventStore.requestFullAccessToEvents()
-            updateAuthorizationStatus()
-            
-            if !granted {
-                isAccessDenied = true
-                errorMessage = "Takvim erişimi reddedildi. Sistem Tercihleri'nden izin verebilirsiniz."
+            let granted: Bool
+            if #available(macOS 14.0, *) {
+                granted = try await eventStore.requestFullAccessToEvents()
+            } else {
+                granted = try await eventStore.requestAccess(to: .event)
             }
-            
+            await MainActor.run {
+                updateAuthorizationStatus()
+            }
             return granted
         } catch {
-            errorMessage = "Takvim izni alınamadı: \(error.localizedDescription)"
-            updateAuthorizationStatus()
+            await MainActor.run {
+                errorMessage = "Takvim izni alınamadı: \(error.localizedDescription)"
+            }
             return false
         }
     }
     
     /// İzin verilmiş mi?
     var isAuthorized: Bool {
-        let status = EKEventStore.authorizationStatus(for: .event)
         if #available(macOS 14.0, *) {
-            return status == .fullAccess
+            return authorizationStatus == .fullAccess || authorizationStatus == .authorized
         } else {
-            return status == .authorized
-        }
-    }
-    
-    /// Sistem Tercihleri → Gizlilik → Takvim'i açar
-    func openSystemPreferences() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
-            NSWorkspace.shared.open(url)
+            return authorizationStatus == .authorized
         }
     }
     
@@ -140,12 +121,14 @@ final class CalendarService {
     // MARK: - Create Event
     
     /// Yeni bir takvim etkinliği oluşturur
+    /// - Returns: Oluşturulan etkinliğin identifier'ı, hata durumunda nil
     func createEvent(
         title: String,
         startDate: Date,
         endDate: Date? = nil,
         notes: String? = nil,
-        isAllDay: Bool = false
+        isAllDay: Bool = false,
+        recurrenceRule: EKRecurrenceRule? = nil
     ) -> String? {
         guard isAuthorized else {
             errorMessage = "Takvim erişim izni gerekli."
@@ -155,10 +138,14 @@ final class CalendarService {
         let event = EKEvent(eventStore: eventStore)
         event.title = title
         event.startDate = startDate
-        event.endDate = endDate ?? startDate.addingTimeInterval(3600)
+        event.endDate = endDate ?? startDate.addingTimeInterval(3600) // Varsayılan 1 saat
         event.notes = notes
         event.isAllDay = isAllDay
         event.calendar = eventStore.defaultCalendarForNewEvents
+        
+        if let rule = recurrenceRule {
+            event.recurrenceRules = [rule]
+        }
         
         do {
             try eventStore.save(event, span: .thisEvent)
@@ -178,12 +165,53 @@ final class CalendarService {
         
         let notes = task.taskDescription.isEmpty ? nil : task.taskDescription
         
+        var recurrenceRule: EKRecurrenceRule? = nil
+        if task.isRecurring, let type = task.recurrenceType {
+            let frequency: EKRecurrenceFrequency
+            var daysOfTheWeek: [EKRecurrenceDayOfWeek]? = nil
+            
+            switch type {
+            case .daily: frequency = .daily
+            case .weekly: frequency = .weekly
+            case .monthly: frequency = .monthly
+            case .customDays:
+                frequency = .weekly
+                if let customDays = task.recurringDaysOfWeek, !customDays.isEmpty {
+                    daysOfTheWeek = customDays.compactMap { dayInt in
+                        if let weekday = EKWeekday(rawValue: dayInt) {
+                            return EKRecurrenceDayOfWeek(weekday)
+                        }
+                        return nil
+                    }
+                }
+            }
+            
+            recurrenceRule = EKRecurrenceRule(
+                recurrenceWith: frequency,
+                interval: 1,
+                daysOfTheWeek: daysOfTheWeek,
+                daysOfTheMonth: nil,
+                monthsOfTheYear: nil,
+                weeksOfTheYear: nil,
+                daysOfTheYear: nil,
+                setPositions: nil,
+                end: nil
+            )
+        }
+        
+        // Eğer zaten takvimde varsa güncellemek için eskisini sil
+        if let existingId = task.calendarEventId {
+            _ = deleteEvent(withIdentifier: existingId)
+            task.calendarEventId = nil
+        }
+        
         let eventId = createEvent(
             title: "📋 \(task.title)",
             startDate: dueDate,
             endDate: dueDate.addingTimeInterval(3600),
             notes: notes,
-            isAllDay: task.dueTime == nil
+            isAllDay: task.dueTime == nil,
+            recurrenceRule: recurrenceRule
         )
         
         if let eventId = eventId {
@@ -205,7 +233,7 @@ final class CalendarService {
         }
         
         do {
-            try eventStore.remove(event, span: .thisEvent)
+            try eventStore.remove(event, span: .futureEvents)
             return true
         } catch {
             errorMessage = "Etkinlik silinemedi: \(error.localizedDescription)"

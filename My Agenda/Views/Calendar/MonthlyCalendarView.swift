@@ -23,6 +23,13 @@ struct MonthlyCalendarView: View {
     @Query(sort: \AgendaTask.dueDate)
     private var allTasks: [AgendaTask]
     
+    @Query(sort: \Dashboard.sortIndex)
+    private var dashboards: [Dashboard]
+    
+    // MARK: - Bindings
+    
+    @Binding var selectedTask: AgendaTask?
+    
     // MARK: - State
     
     @State private var currentMonth: Date = Date()
@@ -241,6 +248,7 @@ struct MonthlyCalendarView: View {
                 )
         )
         .opacity(isCurrentMonth ? 1 : 0.3)
+        .contentShape(Rectangle())
         .onTapGesture {
             withAnimation(.easeInOut(duration: 0.15)) {
                 selectedDate = dateDay.date
@@ -348,15 +356,61 @@ struct MonthlyCalendarView: View {
             RoundedRectangle(cornerRadius: 6)
                 .fill(color.opacity(0.05))
         )
+        .contextMenu {
+            Button {
+                task.toggleCompletion()
+            } label: {
+                Label(
+                    task.isCompleted ? "Geri Al" : "Tamamla",
+                    systemImage: task.isCompleted ? "arrow.uturn.backward" : "checkmark"
+                )
+            }
+            
+            Button {
+                selectedTask = task
+            } label: {
+                Label("Düzenle", systemImage: "pencil")
+            }
+            
+            Menu {
+                Button {
+                    task.dashboard = nil
+                } label: {
+                    Text("Hiçbiri")
+                }
+                
+                ForEach(dashboards) { d in
+                    Button {
+                        task.dashboard = d
+                    } label: {
+                        HStack {
+                            Image(systemName: d.icon)
+                            Text(d.name)
+                        }
+                    }
+                }
+            } label: {
+                Label("Taşı", systemImage: "folder")
+            }
+            
+            Divider()
+            
+            Button(role: .destructive) {
+                if selectedTask?.id == task.id {
+                    selectedTask = nil
+                }
+                modelContext.delete(task)
+            } label: {
+                Label("Sil", systemImage: "trash")
+            }
+        }
     }
     
     // MARK: - Helpers
     
     private func tasksForDay(_ day: Date) -> [AgendaTask] {
-        let calendar = Calendar.current
         return allTasks.filter { task in
-            guard let dueDate = task.dueDate else { return false }
-            return calendar.isDate(dueDate, inSameDayAs: day)
+            task.isScheduled(for: day)
         }.sorted { a, b in
             (a.dueTime ?? Date.distantFuture) < (b.dueTime ?? Date.distantFuture)
         }
@@ -426,7 +480,7 @@ struct DateDay: Identifiable {
 // MARK: - Preview
 
 #Preview {
-    MonthlyCalendarView()
+    MonthlyCalendarView(selectedTask: .constant(nil))
         .modelContainer(for: [Dashboard.self, AgendaTask.self], inMemory: true)
         .frame(width: 750, height: 500)
 }

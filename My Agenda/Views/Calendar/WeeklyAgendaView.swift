@@ -24,6 +24,13 @@ struct WeeklyAgendaView: View {
     @Query(sort: \AgendaTask.dueDate)
     private var allTasks: [AgendaTask]
     
+    @Query(sort: \Dashboard.sortIndex)
+    private var dashboards: [Dashboard]
+    
+    // MARK: - Bindings
+    
+    @Binding var selectedTask: AgendaTask?
+    
     // MARK: - State
     
     /// Gösterilen haftanın referans tarihi (haftanın pazartesi günü)
@@ -202,7 +209,7 @@ struct WeeklyAgendaView: View {
         HStack(spacing: 0) {
             // Boşluk (saat sütunu kadar)
             Color.clear
-                .frame(width: 56)
+                .frame(width: 56, height: 1)
             
             ForEach(weekDays, id: \.self) { day in
                 let isToday = Calendar.current.isDateInToday(day)
@@ -248,7 +255,7 @@ struct WeeklyAgendaView: View {
                         }
                         .frame(height: 6)
                     } else {
-                        Spacer().frame(height: 6)
+                        Color.clear.frame(height: 6)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -407,6 +414,54 @@ struct WeeklyAgendaView: View {
         .buttonStyle(.plain)
         .padding(.horizontal, 2)
         .offset(y: yPos)
+        .contextMenu {
+            Button {
+                task.toggleCompletion()
+            } label: {
+                Label(
+                    task.isCompleted ? "Geri Al" : "Tamamla",
+                    systemImage: task.isCompleted ? "arrow.uturn.backward" : "checkmark"
+                )
+            }
+            
+            Button {
+                selectedTask = task
+            } label: {
+                Label("Düzenle", systemImage: "pencil")
+            }
+            
+            Menu {
+                Button {
+                    task.dashboard = nil
+                } label: {
+                    Text("Hiçbiri")
+                }
+                
+                ForEach(dashboards) { d in
+                    Button {
+                        task.dashboard = d
+                    } label: {
+                        HStack {
+                            Image(systemName: d.icon)
+                            Text(d.name)
+                        }
+                    }
+                }
+            } label: {
+                Label("Taşı", systemImage: "folder")
+            }
+            
+            Divider()
+            
+            Button(role: .destructive) {
+                if selectedTask?.id == task.id {
+                    selectedTask = nil
+                }
+                modelContext.delete(task)
+            } label: {
+                Label("Sil", systemImage: "trash")
+            }
+        }
     }
     
     // MARK: - Task Quick View Sheet
@@ -488,10 +543,8 @@ struct WeeklyAgendaView: View {
     // MARK: - Helpers
     
     private func tasksForDay(_ day: Date) -> [AgendaTask] {
-        let calendar = Calendar.current
         return allTasks.filter { task in
-            guard let dueDate = task.dueDate else { return false }
-            return calendar.isDate(dueDate, inSameDayAs: day)
+            task.isScheduled(for: day)
         }
     }
     
@@ -548,7 +601,7 @@ extension Date {
 // MARK: - Preview
 
 #Preview {
-    WeeklyAgendaView()
+    WeeklyAgendaView(selectedTask: .constant(nil))
         .modelContainer(for: [Dashboard.self, AgendaTask.self], inMemory: true)
         .frame(width: 900, height: 600)
 }

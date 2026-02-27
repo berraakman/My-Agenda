@@ -17,6 +17,7 @@ struct TaskFormView: View {
     
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(NotificationService.self) private var notificationService
     
     // MARK: - SwiftData Query
     
@@ -40,8 +41,10 @@ struct TaskFormView: View {
     @State private var dueDate: Date = Date()
     @State private var hasDueTime: Bool = false
     @State private var dueTime: Date = Date()
+    @State private var addToCalendar: Bool = false
     @State private var isRecurring: Bool = false
     @State private var recurrenceType: RecurrenceType = .daily
+    @State private var recurringDaysOfWeek: [Int] = []
     @State private var selectedDashboard: Dashboard?
     
     // MARK: - Computed
@@ -158,7 +161,6 @@ struct TaskFormView: View {
                         }
                     }
                 }
-                
                 // Tekrarlama
                 Section("Tekrarlama") {
                     Toggle("Tekrarlayan görev", isOn: $isRecurring.animation())
@@ -173,7 +175,16 @@ struct TaskFormView: View {
                                 .tag(type)
                             }
                         }
+                        
+                        if recurrenceType == .customDays {
+                            customDaysSelectionView
+                        }
                     }
+                }
+                
+                // Anımsatıcı
+                Section("Bildirimler") {
+                    Toggle("Uygulama İçi Anımsatıcı Ekle", isOn: $addToCalendar.animation())
                 }
                 
                 // Dashboard seçimi
@@ -260,8 +271,10 @@ struct TaskFormView: View {
             dueDate = task.dueDate ?? Date()
             hasDueTime = task.dueTime != nil
             dueTime = task.dueTime ?? Date()
+            addToCalendar = task.addToCalendar
             isRecurring = task.isRecurring
             recurrenceType = task.recurrenceType ?? .daily
+            recurringDaysOfWeek = task.recurringDaysOfWeek ?? []
             selectedDashboard = task.dashboard
         } else {
             selectedDashboard = defaultDashboard
@@ -279,12 +292,15 @@ struct TaskFormView: View {
             task.priority = priority
             task.dueDate = hasDueDate ? dueDate : nil
             task.dueTime = (hasDueDate && hasDueTime) ? dueTime : nil
+            task.addToCalendar = addToCalendar
             task.isRecurring = isRecurring
             task.recurrenceType = isRecurring ? recurrenceType : nil
+            task.recurringDaysOfWeek = (isRecurring && recurrenceType == .customDays) ? recurringDaysOfWeek : nil
             task.dashboard = selectedDashboard
-        } else {
-            // Yeni görev
-            let task = AgendaTask(
+        }
+        
+        let savedTask = existingTask ?? {
+            let newTask = AgendaTask(
                 title: trimmedTitle,
                 taskDescription: taskDescription,
                 priority: priority,
@@ -292,10 +308,58 @@ struct TaskFormView: View {
                 dueTime: (hasDueDate && hasDueTime) ? dueTime : nil,
                 isRecurring: isRecurring,
                 recurrenceType: isRecurring ? recurrenceType : nil,
+                recurringDaysOfWeek: (isRecurring && recurrenceType == .customDays) ? recurringDaysOfWeek : nil,
+                addToCalendar: addToCalendar,
                 dashboard: selectedDashboard
             )
-            modelContext.insert(task)
+            modelContext.insert(newTask)
+            return newTask
+        }()
+        
+        if addToCalendar {
+            notificationService.scheduleNotification(for: savedTask)
+        } else {
+            notificationService.cancelNotification(for: savedTask)
         }
+    }
+    
+    private var customDaysSelectionView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Tekrarlanacak Günler")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+            
+            HStack(spacing: 8) {
+                let days = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"]
+                let calendarDays = [2, 3, 4, 5, 6, 7, 1] // Apple Calendar: 1=Pazar, 2=Pazartesi vb.
+                
+                ForEach(0..<7, id: \.self) { index in
+                    let dayInt = calendarDays[index]
+                    let isSelected = recurringDaysOfWeek.contains(dayInt)
+                    
+                    Button {
+                        withAnimation {
+                            if isSelected {
+                                recurringDaysOfWeek.removeAll(where: { $0 == dayInt })
+                            } else {
+                                recurringDaysOfWeek.append(dayInt)
+                            }
+                        }
+                    } label: {
+                        Text(days[index])
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(isSelected ? Color.white : Color.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(isSelected ? Color.blue : Color.gray.opacity(0.1))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.vertical, 8)
     }
 }
 

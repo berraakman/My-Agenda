@@ -31,6 +31,7 @@ struct My_AgendaApp: App {
                 // Servisleri tüm view hiyerarşisine enjekte et
                 .environment(calendarService)
                 .environment(notificationService)
+                .environment(\.locale, Locale(identifier: "en_GB"))
                 .onAppear {
                     setupNotifications()
                 }
