@@ -150,15 +150,47 @@ struct CalendarView: View {
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: 350)
                     
-                    Button {
-                        Task {
-                            let _ = await calendarService.requestAccess()
-                            calendarViewModel?.loadEvents()
+                    if calendarService.isAccessDenied {
+                        // İzin daha önce reddedilmiş — Sistem Tercihleri'ne yönlendir
+                        Text("İzin daha önce reddedilmiş. Sistem Tercihleri'nden etkinleştirebilirsiniz.")
+                            .font(.system(size: 13, design: .rounded))
+                            .foregroundStyle(.orange)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 350)
+                        
+                        Button {
+                            calendarService.openSystemPreferences()
+                        } label: {
+                            Text("Sistem Tercihleri'ni Aç")
                         }
-                    } label: {
-                        Label("İzin Ver", systemImage: "lock.open.fill")
+                        .buttonStyle(.borderedProminent)
+                        
+                        Button {
+                            calendarService.updateAuthorizationStatus()
+                        } label: {
+                            Text("Tekrar Kontrol Et")
+                        }
+                        .buttonStyle(.bordered)
+                    } else {
+                        // İlk kez izin isteniyor
+                        Button {
+                            Task {
+                                let _ = await calendarService.requestAccess()
+                                calendarViewModel?.loadEvents()
+                            }
+                        } label: {
+                            Text("İzin Ver")
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                    .buttonStyle(.borderedProminent)
+                    
+                    if let error = calendarService.errorMessage {
+                        Text(error)
+                            .font(.system(size: 12, design: .rounded))
+                            .foregroundStyle(.red)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 300)
+                    }
                     
                     Spacer()
                 }

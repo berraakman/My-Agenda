@@ -7,6 +7,7 @@
 
 import Foundation
 import EventKit
+import AppKit
 
 // MARK: - CalendarService
 /// Apple Calendar (EventKit) entegrasyon servisi.
@@ -31,6 +32,9 @@ final class CalendarService {
     /// Yükleniyor mu?
     var isLoading = false
     
+    /// İzin reddedildi mi? (Sistem Tercihleri'ne yönlendirmek için)
+    var isAccessDenied = false
+    
     // MARK: - Init
     
     init() {
@@ -42,27 +46,51 @@ final class CalendarService {
     /// Mevcut izin durumunu günceller
     func updateAuthorizationStatus() {
         authorizationStatus = EKEventStore.authorizationStatus(for: .event)
+        isAccessDenied = (authorizationStatus == .denied || authorizationStatus == .restricted)
     }
     
     /// Takvim erişim izni ister
+    @MainActor
     func requestAccess() async -> Bool {
+        // Eğer daha önce reddedildiyse, Sistem Tercihleri'ne yönlendir
+        if authorizationStatus == .denied || authorizationStatus == .restricted {
+            isAccessDenied = true
+            openSystemPreferences()
+            return false
+        }
+        
         do {
             let granted = try await eventStore.requestFullAccessToEvents()
-            await MainActor.run {
-                updateAuthorizationStatus()
+            updateAuthorizationStatus()
+            
+            if !granted {
+                isAccessDenied = true
+                errorMessage = "Takvim erişimi reddedildi. Sistem Tercihleri'nden izin verebilirsiniz."
             }
+            
             return granted
         } catch {
-            await MainActor.run {
-                errorMessage = "Takvim izni alınamadı: \(error.localizedDescription)"
-            }
+            errorMessage = "Takvim izni alınamadı: \(error.localizedDescription)"
+            updateAuthorizationStatus()
             return false
         }
     }
     
     /// İzin verilmiş mi?
     var isAuthorized: Bool {
-        authorizationStatus == .fullAccess
+        let status = EKEventStore.authorizationStatus(for: .event)
+        if #available(macOS 14.0, *) {
+            return status == .fullAccess
+        } else {
+            return status == .authorized
+        }
+    }
+    
+    /// Sistem Tercihleri → Gizlilik → Takvim'i açar
+    func openSystemPreferences() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
+            NSWorkspace.shared.open(url)
+        }
     }
     
     // MARK: - Read Events
@@ -112,7 +140,6 @@ final class CalendarService {
     // MARK: - Create Event
     
     /// Yeni bir takvim etkinliği oluşturur
-    /// - Returns: Oluşturulan etkinliğin identifier'ı, hata durumunda nil
     func createEvent(
         title: String,
         startDate: Date,
@@ -128,7 +155,7 @@ final class CalendarService {
         let event = EKEvent(eventStore: eventStore)
         event.title = title
         event.startDate = startDate
-        event.endDate = endDate ?? startDate.addingTimeInterval(3600) // Varsayılan 1 saat
+        event.endDate = endDate ?? startDate.addingTimeInterval(3600)
         event.notes = notes
         event.isAllDay = isAllDay
         event.calendar = eventStore.defaultCalendarForNewEvents
