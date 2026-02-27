@@ -10,8 +10,7 @@ import SwiftData
 
 // MARK: - TaskListView
 /// Tüm görevlerin listelendiği ana görünüm.
-/// Global arama, filtreleme ve sıralama destekler.
-/// Sidebar'da "Tüm Görevler" seçildiğinde gösterilir.
+/// Global arama, filtreleme, sıralama ve toplu işlem destekler.
 struct TaskListView: View {
     
     // MARK: - Environment
@@ -34,6 +33,10 @@ struct TaskListView: View {
     @State private var sortOption: TaskSortOption = .dateDesc
     @State private var isShowingAddTask = false
     
+    /// Toplu işlem state
+    @State private var isSelectionMode = false
+    @State private var selectedTasks: Set<AgendaTask> = []
+    
     // MARK: - Body
     
     var body: some View {
@@ -49,6 +52,12 @@ struct TaskListView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 8)
             
+            // Toplu işlem çubuğu (üstte)
+            BulkActionBar(
+                selectedTasks: $selectedTasks,
+                isSelectionMode: $isSelectionMode
+            )
+            
             // Görev listesi
             if filteredTasks.isEmpty {
                 EmptyStateView(
@@ -59,42 +68,76 @@ struct TaskListView: View {
                     onAction: filterOption == .all ? { isShowingAddTask = true } : nil
                 )
             } else {
-                List(filteredTasks, selection: $selectedTask) { task in
-                    TaskRowView(task: task) {
-                        withAnimation(AppConstants.springAnimation) {
-                            task.toggleCompletion()
-                        }
-                    }
-                    .tag(task)
-                    .contextMenu {
-                        Button {
-                            task.toggleCompletion()
-                        } label: {
-                            Label(
-                                task.isCompleted ? "Geri Al" : "Tamamla",
-                                systemImage: task.isCompleted ? "arrow.uturn.backward" : "checkmark"
-                            )
-                        }
-                        
-                        Divider()
-                        
-                        Button(role: .destructive) {
-                            if selectedTask?.id == task.id {
-                                selectedTask = nil
+                if isSelectionMode {
+                    // Seçim modu — checkbox'lu liste
+                    ScrollView {
+                        LazyVStack(spacing: 4) {
+                            ForEach(filteredTasks) { task in
+                                selectableTaskRow(task)
                             }
-                            modelContext.delete(task)
-                        } label: {
-                            Label("Sil", systemImage: "trash")
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                    }
+                } else {
+                    // Normal mod
+                    List(filteredTasks, selection: $selectedTask) { task in
+                        TaskRowView(task: task) {
+                            withAnimation(AppConstants.springAnimation) {
+                                task.toggleCompletion()
+                            }
+                        }
+                        .tag(task)
+                        .contextMenu {
+                            Button {
+                                task.toggleCompletion()
+                            } label: {
+                                Label(
+                                    task.isCompleted ? "Geri Al" : "Tamamla",
+                                    systemImage: task.isCompleted ? "arrow.uturn.backward" : "checkmark"
+                                )
+                            }
+                            
+                            Divider()
+                            
+                            Button(role: .destructive) {
+                                if selectedTask?.id == task.id {
+                                    selectedTask = nil
+                                }
+                                modelContext.delete(task)
+                            } label: {
+                                Label("Sil", systemImage: "trash")
+                            }
                         }
                     }
+                    .listStyle(.inset)
                 }
-                .listStyle(.inset)
             }
         }
         .navigationTitle("Tüm Görevler")
         .frame(minWidth: AppConstants.contentMinWidth)
         .toolbar {
-            ToolbarItem(placement: .automatic) {
+            ToolbarItemGroup(placement: .automatic) {
+                // Toplu seçim modu toggle
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isSelectionMode.toggle()
+                        if !isSelectionMode {
+                            selectedTasks.removeAll()
+                        }
+                    }
+                } label: {
+                    Text(isSelectionMode ? "Seçimi Kapat" : "Görevleri Seç")
+                }
+                
+                if isSelectionMode {
+                    Button {
+                        selectAll()
+                    } label: {
+                        Text(allSelected ? "Seçimi Temizle" : "Tümünü Seç")
+                    }
+                }
+                
                 Button {
                     isShowingAddTask = true
                 } label: {
@@ -105,6 +148,11 @@ struct TaskListView: View {
         }
         .sheet(isPresented: $isShowingAddTask) {
             TaskFormView()
+        }
+        .onChange(of: isSelectionMode) { _, newValue in
+            if !newValue {
+                selectedTasks.removeAll()
+            }
         }
     }
     
@@ -157,6 +205,12 @@ struct TaskListView: View {
             summaryItem(label: "Bugün", count: allTasks.filter { $0.isDueToday }.count, color: .blue)
             summaryItem(label: "Gecikmiş", count: allTasks.filter { $0.isOverdue }.count, color: .red)
             Spacer()
+            
+            if isSelectionMode {
+                Text("\(selectedTasks.count)/\(filteredTasks.count) seçili")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(.blue)
+            }
         }
     }
     
@@ -168,6 +222,110 @@ struct TaskListView: View {
             Text(label)
                 .font(.system(size: 12, design: .rounded))
                 .foregroundStyle(.secondary)
+        }
+    }
+    
+    // MARK: - Selectable Task Row
+    
+    private func selectableTaskRow(_ task: AgendaTask) -> some View {
+        let isSelected = selectedTasks.contains(task)
+        let color = task.dashboard.map { Color(hex: $0.colorHex) } ?? task.priority.color
+        
+        return HStack(spacing: 12) {
+            // Checkbox
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    if isSelected {
+                        selectedTasks.remove(task)
+                    } else {
+                        selectedTasks.insert(task)
+                    }
+                }
+            } label: {
+                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 20))
+                    .foregroundStyle(isSelected ? .blue : .secondary)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .buttonStyle(.plain)
+            
+            // Sol renk şeridi
+            RoundedRectangle(cornerRadius: 2)
+                .fill(color)
+                .frame(width: 4, height: 40)
+            
+            // Görev bilgileri
+            VStack(alignment: .leading, spacing: 3) {
+                Text(task.title)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .strikethrough(task.isCompleted)
+                    .foregroundStyle(task.isCompleted ? .secondary : .primary)
+                    .lineLimit(1)
+                
+                HStack(spacing: 6) {
+                    PriorityBadgeView(priority: task.priority, showLabel: false)
+                    
+                    if let dueDate = task.dueDate {
+                        Label(dueDate.shortFormatted, systemImage: "calendar")
+                            .font(.system(size: 11, design: .rounded))
+                            .foregroundStyle(task.isOverdue ? .red : .secondary)
+                    }
+                    
+                    if let dashboard = task.dashboard {
+                        HStack(spacing: 3) {
+                            Image(systemName: dashboard.icon)
+                                .font(.system(size: 9))
+                            Text(dashboard.name)
+                                .font(.system(size: 11, design: .rounded))
+                        }
+                        .foregroundStyle(Color(hex: dashboard.colorHex).opacity(0.7))
+                    }
+                    
+                    if task.isCompleted {
+                        Label("Tamamlandı", systemImage: "checkmark.circle.fill")
+                            .font(.system(size: 11, design: .rounded))
+                            .foregroundStyle(.green)
+                    }
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isSelected ? Color.blue.opacity(0.06) : Color.clear)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(isSelected ? Color.blue.opacity(0.2) : .clear, lineWidth: 1)
+                )
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                if isSelected {
+                    selectedTasks.remove(task)
+                } else {
+                    selectedTasks.insert(task)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Helpers
+    
+    private var allSelected: Bool {
+        !filteredTasks.isEmpty && selectedTasks.count == filteredTasks.count
+    }
+    
+    private func selectAll() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if allSelected {
+                selectedTasks.removeAll()
+            } else {
+                selectedTasks = Set(filteredTasks)
+            }
         }
     }
     

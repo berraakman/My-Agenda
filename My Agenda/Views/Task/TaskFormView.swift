@@ -106,17 +106,33 @@ struct TaskFormView: View {
                 
                 // Öncelik
                 Section("Öncelik") {
-                    Picker("Öncelik", selection: $priority) {
+                    HStack(spacing: 8) {
                         ForEach(Priority.allCases) { p in
-                            HStack {
-                                Image(systemName: p.iconName)
-                                    .foregroundStyle(p.color)
-                                Text(p.displayName)
+                            Button {
+                                priority = p
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: p.iconName)
+                                        .font(.system(size: 13, weight: .semibold))
+                                    Text(p.displayName)
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                }
+                                .foregroundStyle(priority == p ? .white : p.color)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .frame(maxWidth: .infinity)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(priority == p ? p.color : p.color.opacity(0.1))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(priority == p ? p.color : .clear, lineWidth: 1)
+                                )
                             }
-                            .tag(p)
+                            .buttonStyle(.plain)
                         }
                     }
-                    .pickerStyle(.segmented)
                 }
                 
                 // Tarih & Saat

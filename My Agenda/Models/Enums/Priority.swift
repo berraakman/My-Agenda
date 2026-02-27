@@ -42,8 +42,8 @@ enum Priority: String, Codable, CaseIterable, Identifiable {
     var iconName: String {
         switch self {
         case .low:    return "arrow.down.circle.fill"
-        case .medium: return "equal.circle.fill"
-        case .high:   return "arrow.up.circle.fill"
+        case .medium: return "minus.circle.fill"
+        case .high:   return "exclamationmark.circle.fill"
         }
     }
     

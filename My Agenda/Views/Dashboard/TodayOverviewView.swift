@@ -109,16 +109,17 @@ struct TodayOverviewView: View {
                 }
                 
                 // ════════════════════════════════════════
+                // DASHBOARD KARTLARI (Grid)
+                // ════════════════════════════════════════
+                dashboardCardsSection
+                
+                // ════════════════════════════════════════
                 // ANA İÇERİK: BUGÜNKÜ + YAKLASAN
                 // ════════════════════════════════════════
                 HStack(alignment: .top, spacing: 20) {
                     todayTasksCard
                     
-                    VStack(spacing: 20) {
-                        upcomingTasksCard
-                        dashboardOverviewCard
-                    }
-                    .frame(minWidth: 320)
+                    upcomingTasksCard
                 }
             }
             .padding(28)
@@ -589,109 +590,197 @@ struct TodayOverviewView: View {
         )
     }
     
-    // MARK: - Dashboard Overview Card
+    // MARK: - Dashboard Cards Section
     
-    private var dashboardOverviewCard: some View {
+    private var dashboardCardsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
+            // Bölüm başlığı
             HStack {
                 Image(systemName: "square.grid.2x2.fill")
-                    .font(.system(size: 16))
+                    .font(.system(size: 18))
                     .foregroundStyle(.purple)
                 
                 Text("Dashboard'larım")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
                 
                 Spacer()
                 
-                Text("\(dashboards.count)")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(.secondary)
+                Text("\(dashboards.count) dashboard")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(.tertiary)
             }
             
-            Divider()
-            
             if dashboards.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "folder.badge.plus")
-                        .font(.system(size: 24, weight: .light))
-                        .foregroundStyle(.tertiary)
-                    Text("Henüz dashboard yok")
-                        .font(.system(size: 13, design: .rounded))
-                        .foregroundStyle(.tertiary)
-                    Text("Sidebar'dan yeni dashboard oluşturun")
-                        .font(.system(size: 11, design: .rounded))
-                        .foregroundStyle(.quaternary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-            } else {
-                ForEach(dashboards) { dashboard in
-                    let color = Color(hex: dashboard.colorHex)
-                    let isHovered = hoveredDashboard?.id == dashboard.id
-                    
-                    Button {
-                        selectedSidebarItem = .dashboard(dashboard)
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: dashboard.icon)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.white)
-                                .frame(width: 30, height: 30)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 7)
-                                        .fill(color.gradient)
-                                )
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(dashboard.name)
-                                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                                    .foregroundStyle(.primary)
-                                    .lineLimit(1)
-                                
-                                Text("\(dashboard.completedTaskCount)/\(dashboard.totalTaskCount) görev")
-                                    .font(.system(size: 11, design: .rounded))
-                                    .foregroundStyle(.secondary)
-                            }
-                            
-                            Spacer()
-                            
-                            ProgressRingView(
-                                progress: dashboard.completionPercentage,
-                                color: color,
-                                lineWidth: 3,
-                                size: 28,
-                                showPercentage: false
-                            )
-                            
-                            Text("\(Int(dashboard.completionPercentage * 100))%")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundStyle(color)
-                                .frame(width: 40, alignment: .trailing)
-                        }
-                        .padding(8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(isHovered ? color.opacity(0.06) : .clear)
-                        )
+                // Boş durum
+                HStack {
+                    Spacer()
+                    VStack(spacing: 10) {
+                        Image(systemName: "folder.badge.plus")
+                            .font(.system(size: 36, weight: .light))
+                            .foregroundStyle(.tertiary)
+                        Text("Henüz dashboard yok")
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                            .foregroundStyle(.tertiary)
+                        Text("Sidebar'daki + butonuyla yeni dashboard oluşturun")
+                            .font(.system(size: 13, design: .rounded))
+                            .foregroundStyle(.quaternary)
                     }
-                    .buttonStyle(.plain)
-                    .onHover { hover in
-                        withAnimation(.easeInOut(duration: 0.1)) {
-                            hoveredDashboard = hover ? dashboard : nil
-                        }
+                    Spacer()
+                }
+                .padding(.vertical, 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18)
+                                .strokeBorder(.primary.opacity(0.04), lineWidth: 1)
+                        )
+                )
+            } else {
+                // Dashboard kartları grid
+                LazyVGrid(columns: [
+                    GridItem(.flexible(), spacing: 16),
+                    GridItem(.flexible(), spacing: 16)
+                ], spacing: 16) {
+                    ForEach(dashboards) { dashboard in
+                        dashboardCard(dashboard)
                     }
                 }
             }
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18)
-                        .stroke(.primary.opacity(0.06), lineWidth: 1)
+    }
+    
+    // MARK: - Individual Dashboard Card
+    
+    private func dashboardCard(_ dashboard: Dashboard) -> some View {
+        let color = Color(hex: dashboard.colorHex)
+        let isHovered = hoveredDashboard?.id == dashboard.id
+        let percentage = Int(dashboard.completionPercentage * 100)
+        
+        return Button {
+            selectedSidebarItem = .dashboard(dashboard)
+        } label: {
+            VStack(spacing: 0) {
+                // Üst kısım: Gradient header
+                HStack {
+                    // İkon
+                    Image(systemName: dashboard.icon)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(.white.opacity(0.2))
+                        )
+                    
+                    Spacer()
+                    
+                    // Progress ring
+                    ProgressRingView(
+                        progress: dashboard.completionPercentage,
+                        color: .white,
+                        lineWidth: 3.5,
+                        size: 44,
+                        showPercentage: false
+                    )
+                    .overlay {
+                        Text("\(percentage)%")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .padding(16)
+                .background(
+                    LinearGradient(
+                        colors: [color, color.opacity(0.75)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 )
-        )
+                
+                // Alt kısım: Bilgiler
+                VStack(alignment: .leading, spacing: 12) {
+                    // Dashboard adı
+                    Text(dashboard.name)
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    
+                    // İstatistikler
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(dashboard.totalTaskCount)")
+                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                            Text("Toplam")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(dashboard.completedTaskCount)")
+                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                .foregroundStyle(.green)
+                            Text("Bitti")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(dashboard.pendingTaskCount)")
+                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                .foregroundStyle(.orange)
+                            Text("Bekleyen")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        if dashboard.overdueTaskCount > 0 {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(dashboard.overdueTaskCount)")
+                                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.red)
+                                Text("Gecikmiş")
+                                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    // Progress bar
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(.primary.opacity(0.06))
+                                .frame(height: 6)
+                            
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(color.gradient)
+                                .frame(
+                                    width: geo.size.width * CGFloat(dashboard.completionPercentage),
+                                    height: 6
+                                )
+                        }
+                    }
+                    .frame(height: 6)
+                }
+                .padding(16)
+                .background(.ultraThinMaterial)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isHovered ? color.opacity(0.4) : .primary.opacity(0.06), lineWidth: isHovered ? 2 : 1)
+            )
+            .shadow(color: isHovered ? color.opacity(0.15) : .clear, radius: 10, y: 4)
+        }
+        .buttonStyle(.plain)
+        .onHover { hover in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                hoveredDashboard = hover ? dashboard : nil
+            }
+        }
     }
     
     // MARK: - Helpers

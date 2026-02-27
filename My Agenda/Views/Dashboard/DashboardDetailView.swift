@@ -11,7 +11,7 @@ import SwiftData
 // MARK: - DashboardDetailView
 /// Seçili dashboard'un içeriğini gösterir.
 /// Üstte ilerleme kartı, altta görev listesi yer alır.
-/// Görev ekleme, filtreleme ve dashboard düzenleme işlemleri yapılabilir.
+/// Görev ekleme, filtreleme, toplu işlem ve dashboard düzenleme işlemleri yapılabilir.
 struct DashboardDetailView: View {
     
     // MARK: - Environment
@@ -30,18 +30,30 @@ struct DashboardDetailView: View {
     @State private var filterOption: TaskFilterOption = .all
     @State private var searchText = ""
     
+    /// Toplu işlem state
+    @State private var isSelectionMode = false
+    @State private var selectedTasks: Set<AgendaTask> = []
+    
     // MARK: - Body
     
     var body: some View {
         VStack(spacing: 0) {
-            // İlerleme kartı
-            DashboardProgressView(dashboard: dashboard)
-                .padding()
+            // İlerleme kartı (seçim modunda gizle daha fazla alan için)
+            if !isSelectionMode {
+                DashboardProgressView(dashboard: dashboard)
+                    .padding()
+            }
             
             // Filtre bar
             filterBar
                 .padding(.horizontal)
                 .padding(.bottom, 8)
+            
+            // Toplu işlem çubuğu (üstte)
+            BulkActionBar(
+                selectedTasks: $selectedTasks,
+                isSelectionMode: $isSelectionMode
+            )
             
             Divider()
             
@@ -55,19 +67,53 @@ struct DashboardDetailView: View {
                     onAction: filterOption == .all ? { isShowingAddTask = true } : nil
                 )
             } else {
-                List(filteredTasks, selection: $selectedTask) { task in
-                    TaskRowView(task: task) {
-                        task.toggleCompletion()
+                if isSelectionMode {
+                    // Seçim modu
+                    ScrollView {
+                        LazyVStack(spacing: 4) {
+                            ForEach(filteredTasks) { task in
+                                selectableTaskRow(task)
+                            }
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
                     }
-                    .tag(task)
+                } else {
+                    // Normal mod
+                    List(filteredTasks, selection: $selectedTask) { task in
+                        TaskRowView(task: task) {
+                            task.toggleCompletion()
+                        }
+                        .tag(task)
+                    }
+                    .listStyle(.inset)
                 }
-                .listStyle(.inset)
             }
         }
         .navigationTitle(dashboard.name)
         .frame(minWidth: AppConstants.contentMinWidth)
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
+                // Toplu seçim modu toggle
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isSelectionMode.toggle()
+                        if !isSelectionMode {
+                            selectedTasks.removeAll()
+                        }
+                    }
+                } label: {
+                    Text(isSelectionMode ? "Seçimi Kapat" : "Görevleri Seç")
+                }
+                
+                if isSelectionMode {
+                    Button {
+                        selectAll()
+                    } label: {
+                        Text(allSelected ? "Seçimi Temizle" : "Tümünü Seç")
+                    }
+                }
+                
                 Button {
                     isShowingEditDashboard = true
                 } label: {
@@ -91,6 +137,105 @@ struct DashboardDetailView: View {
                 dashboard.name = name
                 dashboard.icon = icon
                 dashboard.colorHex = colorHex
+            }
+        }
+        .onChange(of: isSelectionMode) { _, newValue in
+            if !newValue {
+                selectedTasks.removeAll()
+            }
+        }
+    }
+    
+    // MARK: - Selectable Task Row
+    
+    private func selectableTaskRow(_ task: AgendaTask) -> some View {
+        let isSelected = selectedTasks.contains(task)
+        let color = Color(hex: dashboard.colorHex)
+        
+        return HStack(spacing: 12) {
+            // Checkbox
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    if isSelected {
+                        selectedTasks.remove(task)
+                    } else {
+                        selectedTasks.insert(task)
+                    }
+                }
+            } label: {
+                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 20))
+                    .foregroundStyle(isSelected ? color : .secondary)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .buttonStyle(.plain)
+            
+            // Renk şeridi
+            RoundedRectangle(cornerRadius: 2)
+                .fill(task.priority.color)
+                .frame(width: 4, height: 40)
+            
+            // Görev bilgileri
+            VStack(alignment: .leading, spacing: 3) {
+                Text(task.title)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .strikethrough(task.isCompleted)
+                    .foregroundStyle(task.isCompleted ? .secondary : .primary)
+                    .lineLimit(1)
+                
+                HStack(spacing: 6) {
+                    PriorityBadgeView(priority: task.priority, showLabel: false)
+                    
+                    if let dueDate = task.dueDate {
+                        Label(dueDate.shortFormatted, systemImage: "calendar")
+                            .font(.system(size: 11, design: .rounded))
+                            .foregroundStyle(task.isOverdue ? .red : .secondary)
+                    }
+                    
+                    if task.isCompleted {
+                        Label("Tamamlandı", systemImage: "checkmark.circle.fill")
+                            .font(.system(size: 11, design: .rounded))
+                            .foregroundStyle(.green)
+                    }
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isSelected ? color.opacity(0.06) : Color.clear)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(isSelected ? color.opacity(0.2) : .clear, lineWidth: 1)
+                )
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                if isSelected {
+                    selectedTasks.remove(task)
+                } else {
+                    selectedTasks.insert(task)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Helpers
+    
+    private var allSelected: Bool {
+        !filteredTasks.isEmpty && selectedTasks.count == filteredTasks.count
+    }
+    
+    private func selectAll() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if allSelected {
+                selectedTasks.removeAll()
+            } else {
+                selectedTasks = Set(filteredTasks)
             }
         }
     }
@@ -173,6 +318,12 @@ struct DashboardDetailView: View {
             .frame(maxWidth: 200)
             
             Spacer()
+            
+            if isSelectionMode {
+                Text("\(selectedTasks.count)/\(filteredTasks.count) seçili")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color(hex: dashboard.colorHex))
+            }
             
             // Filtre picker
             Picker("Filtre", selection: $filterOption) {
