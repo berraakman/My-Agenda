@@ -13,9 +13,10 @@
 Uygulama, en yeni iPhone modellerinde (iPhone 16 ve Pro serisi) kusursuz çalışacak şekilde optimize edilmiştir.
 
 <p align="center">
-  <img src="images/iphone_1.png" width="230" alt="iPhone 1">
-  <img src="images/iphone_2.png" width="230" alt="iPhone 2">
-  <img src="images/iphone_3.png" width="230" alt="iPhone 3">
+  <img src="images/iphone_1.png" width="180" alt="iPhone Screen 1">
+  <img src="images/iphone_2.png" width="180" alt="iPhone Screen 2">
+  <img src="images/iphone_3.png" width="180" alt="iPhone Screen 3">
+  <img src="images/iphone_4.png" width="180" alt="iPhone Screen 4">
 </p>
 
 - **İnteraktif Kayan Menü (Swipe to Open):** Ekranın sol kenarından parmağınızı kaydırarak erişebileceğiniz akıcı ve modern sidebar deneyimi.
