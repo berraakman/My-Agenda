@@ -2,19 +2,36 @@
 
 **My Agenda**, macOS ve iOS platformları için sıfırdan tasarlanmış, Apple ekosistemine tam uyumlu, modern ve kristal netliğinde bir kişisel yönetim uygulamasıdır. Günlük görevlerinizi, projelerinizi ve ajandanızı tek bir merkezden, premium bir kullanıcı deneyimiyle yönetmenize olanak tanır.
 
+<p align="center">
+  <img src="images/mac_1.png" width="800" alt="macOS Overview">
+</p>
+
 ---
 
 ## 📱 iPhone 16 & iOS İçin Ultra Optimizasyon
-Uygulama, en yeni iPhone modellerinde (iPhone 16 ve Pro serisi) kusursuz çalışacak şekilde optimize edilmiştir:
+
+Uygulama, en yeni iPhone modellerinde (iPhone 16 ve Pro serisi) kusursuz çalışacak şekilde optimize edilmiştir.
+
+<p align="center">
+  <img src="images/iphone_1.png" width="230" alt="iPhone 1">
+  <img src="images/iphone_2.png" width="230" alt="iPhone 2">
+  <img src="images/iphone_3.png" width="230" alt="iPhone 3">
+</p>
+
 - **İnteraktif Kayan Menü (Swipe to Open):** Ekranın sol kenarından parmağınızı kaydırarak erişebileceğiniz akıcı ve modern sidebar deneyimi.
 - **44x44 Dokunmatik Standartlar:** Tüm butonlar ve etkileşimli alanlar Apple'ın erişilebilirlik standartlarına uygun olarak tasarlanmıştır.
-- **Duyarlı (Responsive) Formlar:** Dashboard ekleme ve düzenleme ekranları, renk paletleri ve ikonlar tüm ekran boyutlarına tam sığacak şekilde otomatik uyarlanır.
 - **Hız ve Yumuşaklık:** iOS'in yüksek yenileme hızına (ProMotion) tam uyumlu, yaylı (`spring`) animasyonlar ile yağ gibi akıcı geçişler.
 
 ---
 
 ## 💻 macOS Deneyimi
-Mac kullanıcıları için gerçek bir "Native" deneyim sunar:
+
+Mac kullanıcıları için gerçek bir "Native" deneyim sunar.
+
+<p align="center">
+  <img src="images/mac_2.png" width="800" alt="macOS Calendar">
+</p>
+
 - **3 Sütunlu (Three-Column) Layout:** Sidebar, içerik listesi ve detay paneli ile masaüstü verimliliğini maksimize eder.
 - **Mac'e Özel Kısayollar:** `Enter` ile kaydetme, `Esc` ile çıkma gibi yerleşik klavye desteği.
 - **Dinamik Pencere Yönetimi:** Pencere boyutuna göre otomatik olarak şekil değiştiren akıllı arayüz.
