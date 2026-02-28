@@ -17,6 +17,8 @@ struct TaskListView: View {
     
     @Environment(\.modelContext) private var modelContext
     
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    
     // MARK: - SwiftData Query
     
     @Query(sort: \AgendaTask.createdAt, order: .reverse)
@@ -145,7 +147,9 @@ struct TaskListView: View {
             }
         }
         .navigationTitle("Tüm Görevler")
+        #if os(macOS)
         .frame(minWidth: AppConstants.contentMinWidth)
+        #endif
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
                 // Toplu seçim modu toggle
@@ -189,41 +193,63 @@ struct TaskListView: View {
     // MARK: - Top Bar
     
     private var topBar: some View {
-        HStack(spacing: 12) {
-            // Arama
-            SearchBarView(text: $searchText)
-                .frame(maxWidth: 220)
-            
-            Spacer()
-            
-            // Sıralama
-            Menu {
-                ForEach(TaskSortOption.allCases) { option in
-                    Button {
-                        sortOption = option
-                    } label: {
-                        HStack {
-                            Text(option.displayName)
-                            if sortOption == option {
-                                Image(systemName: "checkmark")
-                            }
+        Group {
+            if sizeClass == .compact {
+                VStack(spacing: 12) {
+                    HStack {
+                        SearchBarView(text: $searchText)
+                        
+                        sortMenu
+                    }
+                    
+                    filterPicker
+                }
+            } else {
+                HStack(spacing: 12) {
+                    // Arama
+                    SearchBarView(text: $searchText)
+                        .frame(maxWidth: 220)
+                    
+                    Spacer()
+                    
+                    // Sıralama
+                    sortMenu
+                    
+                    // Filtre
+                    filterPicker
+                        .frame(maxWidth: 360)
+                }
+            }
+        }
+    }
+    
+    private var sortMenu: some View {
+        Menu {
+            ForEach(TaskSortOption.allCases) { option in
+                Button {
+                    sortOption = option
+                } label: {
+                    HStack {
+                        Text(option.displayName)
+                        if sortOption == option {
+                            Image(systemName: "checkmark")
                         }
                     }
                 }
-            } label: {
-                Label("Sırala", systemImage: "arrow.up.arrow.down")
-                    .font(.system(size: 13))
             }
-            
-            // Filtre
-            Picker("Filtre", selection: $filterOption) {
-                ForEach(TaskFilterOption.allCases) { option in
-                    Text(option.displayName).tag(option)
-                }
-            }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: 360)
+        } label: {
+            Label("Sırala", systemImage: "arrow.up.arrow.down")
+                .font(.system(size: 13))
         }
+    }
+    
+    private var filterPicker: some View {
+        Picker("Filtre", selection: $filterOption) {
+            ForEach(TaskFilterOption.allCases) { option in
+                Text(option.displayName).tag(option)
+            }
+        }
+        .pickerStyle(.segmented)
     }
     
     // MARK: - Summary Bar

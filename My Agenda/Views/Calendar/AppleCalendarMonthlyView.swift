@@ -15,6 +15,7 @@ struct AppleCalendarMonthlyView: View {
     // MARK: - Environment
     
     @Environment(CalendarService.self) private var calendarService
+    @Environment(\.horizontalSizeClass) private var sizeClass
     
     // MARK: - State
     
@@ -84,22 +85,29 @@ struct AppleCalendarMonthlyView: View {
                 // ════════════════════════════════════════
                 // İÇERİK: Takvim + Gün Detayı
                 // ════════════════════════════════════════
-                HSplitView {
-                    // Sol: Aylık grid
-                    VStack(spacing: 0) {
-                        // Gün adları başlığı
-                        weekdayHeader
-                        
-                        Divider()
-                        
-                        // Takvim grid'i
-                        calendarGrid
+                Group {
+                    if sizeClass == .compact {
+                        VStack(spacing: 0) {
+                            calendarGridSection
+                            Divider()
+                            selectedDayDetail
+                                // .frame(maxHeight: .infinity) // İçindeki ScrollView'ın düzgün çalışması için
+                        }
+                    } else {
+                        #if os(macOS)
+                        HSplitView {
+                            calendarGridSection
+                                .frame(minWidth: 380)
+                            selectedDayDetail
+                                .frame(minWidth: 260, idealWidth: 300)
+                        }
+                        #else
+                        HStack(spacing: 0) {
+                            calendarGridSection
+                            selectedDayDetail
+                        }
+                        #endif
                     }
-                    .frame(minWidth: 380)
-                    
-                    // Sağ: Seçili günün etkinlikleri
-                    selectedDayDetail
-                        .frame(minWidth: 260, idealWidth: 300)
                 }
             }
         }
@@ -112,6 +120,14 @@ struct AppleCalendarMonthlyView: View {
             if calendarService.isAuthorized {
                 loadEventsForCurrentMonth()
             }
+        }
+    }
+    
+    private var calendarGridSection: some View {
+        VStack(spacing: 0) {
+            weekdayHeader
+            Divider()
+            calendarGrid
         }
     }
     
@@ -149,16 +165,17 @@ struct AppleCalendarMonthlyView: View {
             
             Spacer()
             
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 Button {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         navigateMonth(by: -1)
                     }
                 } label: {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(width: 28, height: 28)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(.quaternary))
+                        .font(.system(size: 15, weight: .bold))
+                        .frame(width: 36, height: 36)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(.quaternary.opacity(0.6)))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 
@@ -169,11 +186,12 @@ struct AppleCalendarMonthlyView: View {
                     }
                 } label: {
                     Text("Bugün")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(.blue.opacity(0.12)))
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(.blue.opacity(0.12)))
                         .foregroundStyle(.blue)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 
@@ -183,9 +201,10 @@ struct AppleCalendarMonthlyView: View {
                     }
                 } label: {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(width: 28, height: 28)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(.quaternary))
+                        .font(.system(size: 15, weight: .bold))
+                        .frame(width: 36, height: 36)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(.quaternary.opacity(0.6)))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
@@ -200,14 +219,18 @@ struct AppleCalendarMonthlyView: View {
     private var weekdayHeader: some View {
         LazyVGrid(columns: columns, spacing: 0) {
             ForEach(weekdaySymbols, id: \.self) { symbol in
-                Text(symbol)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                weekdaySymbolView(symbol)
             }
         }
         .background(.bar.opacity(0.5))
+    }
+    
+    private func weekdaySymbolView(_ symbol: String) -> some View {
+        Text(symbol)
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
     }
     
     // MARK: - Calendar Grid
@@ -230,65 +253,78 @@ struct AppleCalendarMonthlyView: View {
         let events = eventsForDay(dateDay.date)
         
         return VStack(spacing: 3) {
-            // Gün numarası
-            ZStack {
-                if isToday {
-                    Circle()
-                        .fill(.blue)
-                        .frame(width: 26, height: 26)
-                }
-                
-                Text("\(Calendar.current.component(.day, from: dateDay.date))")
-                    .font(.system(size: 12, weight: isToday || isSelected ? .bold : .regular, design: .rounded))
-                    .foregroundStyle(
-                        isToday ? .white :
-                        !isCurrentMonth ? Color.gray.opacity(0.3) :
-                        .primary
-                    )
-            }
-            
-            // Etkinlik göstergeleri
-            if !events.isEmpty && isCurrentMonth {
-                VStack(spacing: 2) {
-                    // Etkinlik noktaları
-                    HStack(spacing: 2) {
-                        ForEach(Array(events.prefix(3).enumerated()), id: \.offset) { _, event in
-                            Circle()
-                                .fill(Color(nsColor: event.calendar.color))
-                                .frame(width: 5, height: 5)
-                        }
-                    }
-                    
-                    if events.count > 3 {
-                        Text("+\(events.count - 3)")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            
+            dayNumberCircle(dateday: dateDay, isToday: isToday, isSelected: isSelected)
+            eventIndicators(events: events, isCurrentMonth: isCurrentMonth)
             Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, minHeight: 64)
+        .frame(maxWidth: .infinity, minHeight: sizeClass == .compact ? 54 : 64)
         .padding(4)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(
-                    isSelected ? .blue.opacity(0.08) :
-                    isToday ? .blue.opacity(0.03) :
-                    .clear
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(isSelected ? .blue.opacity(0.3) : .clear, lineWidth: 1)
-                )
-        )
+        .background(dayCellBackground(isToday: isToday, isSelected: isSelected))
         .opacity(isCurrentMonth ? 1 : 0.3)
+        .contentShape(Rectangle())
         .onTapGesture {
             withAnimation(.easeInOut(duration: 0.15)) {
                 selectedDate = dateDay.date
             }
         }
+    }
+    
+    @ViewBuilder
+    private func dayNumberCircle(dateday: DateDay, isToday: Bool, isSelected: Bool) -> some View {
+        ZStack {
+            if isToday {
+                Circle()
+                    .fill(.blue)
+                    .frame(width: 26, height: 26)
+            }
+            
+            Text("\(Calendar.current.component(.day, from: dateday.date))")
+                .font(.system(size: 12, weight: isToday || isSelected ? .bold : .regular, design: .rounded))
+                .foregroundStyle(
+                    isToday ? .white :
+                    !dateday.isCurrentMonth ? Color.gray.opacity(0.3) :
+                    .primary
+                )
+        }
+    }
+    
+    @ViewBuilder
+    private func eventIndicators(events: [EKEvent], isCurrentMonth: Bool) -> some View {
+        if !events.isEmpty && isCurrentMonth {
+            VStack(spacing: 2) {
+                HStack(spacing: 2) {
+                    ForEach(Array(events.prefix(3).enumerated()), id: \.offset) { _, event in
+                        Circle()
+                            #if os(macOS)
+                            .fill(Color(nsColor: event.calendar.color))
+                            #else
+                            .fill(Color(event.calendar.cgColor))
+                            #endif
+                            .frame(width: 5, height: 5)
+                    }
+                }
+                
+                if events.count > 3 {
+                    Text("+\(events.count - 3)")
+                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func dayCellBackground(isToday: Bool, isSelected: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 6)
+            .fill(
+                isSelected ? .blue.opacity(0.08) :
+                isToday ? .blue.opacity(0.03) :
+                .clear
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(isSelected ? .blue.opacity(0.3) : .clear, lineWidth: 1)
+            )
     }
     
     // MARK: - Selected Day Detail

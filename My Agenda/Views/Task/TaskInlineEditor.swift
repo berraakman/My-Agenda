@@ -49,9 +49,11 @@ struct TaskInlineEditor: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 24)
         }
-        .background(Color(NSColor.textBackgroundColor).opacity(0.3)) // Hafif transparan zemin
+        .background(Color.primary.opacity(0.05)) // Hafif transparan zemin
         .navigationTitle("Detaylar")
+        #if os(macOS)
         .frame(minWidth: AppConstants.detailMinWidth)
+        #endif
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button(role: .destructive) {
@@ -106,7 +108,11 @@ struct TaskInlineEditor: View {
                 .padding(10)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
+                        #if os(macOS)
                         .fill(Color(NSColor.controlBackgroundColor))
+                        #else
+                        .fill(Color(.secondarySystemBackground))
+                        #endif
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color.gray.opacity(0.2), lineWidth: 1)
@@ -342,7 +348,11 @@ struct TaskInlineEditor: View {
     
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: 12)
+            #if os(macOS)
             .fill(Color(NSColor.controlBackgroundColor))
+            #else
+            .fill(Color(.secondarySystemBackground))
+            #endif
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.gray.opacity(0.2), lineWidth: 1)

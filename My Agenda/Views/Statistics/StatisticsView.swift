@@ -16,6 +16,7 @@ struct StatisticsView: View {
     // MARK: - Environment
     
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var sizeClass
     
     // MARK: - State
     
@@ -40,7 +41,9 @@ struct StatisticsView: View {
             .padding()
         }
         .navigationTitle("İstatistikler")
+        #if os(macOS)
         .frame(minWidth: AppConstants.contentMinWidth)
+        #endif
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button {
@@ -62,12 +65,17 @@ struct StatisticsView: View {
     // MARK: - Overview Cards
     
     private func overviewCards(_ vm: StatisticsViewModel) -> some View {
-        LazyVGrid(columns: [
+        let columns: [GridItem] = sizeClass == .compact ? [
+            GridItem(.flexible()),
+            GridItem(.flexible())
+        ] : [
             GridItem(.flexible()),
             GridItem(.flexible()),
             GridItem(.flexible()),
             GridItem(.flexible())
-        ], spacing: 12) {
+        ]
+        
+        return LazyVGrid(columns: columns, spacing: 12) {
             overviewCard(
                 icon: "checklist",
                 title: "Toplam Görev",

@@ -16,6 +16,7 @@ struct TodayOverviewView: View {
     // MARK: - Environment
     
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var sizeClass
     
     // MARK: - Queries
     
@@ -114,18 +115,18 @@ struct TodayOverviewView: View {
                 dashboardCardsSection
                 
                 // ════════════════════════════════════════
-                // ANA İÇERİK: BUGÜNKÜ + YAKLASAN
-                // ════════════════════════════════════════
-                HStack(alignment: .top, spacing: 20) {
+                adaptiveContentLayout {
                     todayTasksCard
                     
                     upcomingTasksCard
                 }
             }
-            .padding(28)
+            .padding(sizeClass == .compact ? 16 : 28)
         }
         .navigationTitle("Genel Bakış")
+        #if os(macOS)
         .frame(minWidth: AppConstants.contentMinWidth)
+        #endif
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button {
@@ -149,14 +150,14 @@ struct TodayOverviewView: View {
     // MARK: - Hero Header
     
     private var heroHeader: some View {
-        HStack(spacing: 24) {
-            VStack(alignment: .leading, spacing: 8) {
+        adaptiveHeaderLayout {
+            VStack(alignment: sizeClass == .compact ? .center : .leading, spacing: 8) {
                 Text(greeting)
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .font(.system(size: sizeClass == .compact ? 28 : 34, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
                 
                 Text(Date().longFormatted)
-                    .font(.system(size: 18, weight: .medium, design: .rounded))
+                    .font(.system(size: sizeClass == .compact ? 16 : 18, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
                 
                 // Mini özet
@@ -173,13 +174,16 @@ struct TodayOverviewView: View {
                 }
                 .padding(.top, 4)
             }
+            .frame(maxWidth: sizeClass == .compact ? .infinity : nil, alignment: .leading)
             
-            Spacer()
+            if sizeClass != .compact {
+                Spacer()
+            }
             
             // Dijital saat
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: sizeClass == .compact ? .center : .trailing, spacing: 4) {
                 Text(currentTime.timeFormatted)
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .font(.system(size: sizeClass == .compact ? 42 : 48, weight: .bold, design: .rounded))
                     .foregroundStyle(.blue)
                     .monospacedDigit()
                 
@@ -187,6 +191,7 @@ struct TodayOverviewView: View {
                     .font(.system(size: 15, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
             }
+            .frame(maxWidth: sizeClass == .compact ? .infinity : nil, alignment: .trailing)
         }
         .padding(28)
         .background(
@@ -208,43 +213,61 @@ struct TodayOverviewView: View {
     // MARK: - Stats Row
     
     private var statsRow: some View {
-        HStack(spacing: 16) {
-            statCard(
-                icon: "sun.max.fill",
-                title: "Bugün",
-                value: "\(todayTasks.count)",
-                subtitle: "\(todayCompleted) tamamlandı",
-                color: .orange,
-                detail: todayTasks.isEmpty ? "Görev yok" : "\(todayTasks.count - todayCompleted) kalan"
-            )
-            
-            statCard(
-                icon: "clock.fill",
-                title: "Bekleyen",
-                value: "\(totalPending)",
-                subtitle: "toplam görev",
-                color: .blue,
-                detail: "\(allTasks.count) toplam"
-            )
-            
-            statCard(
-                icon: "exclamationmark.triangle.fill",
-                title: "Gecikmiş",
-                value: "\(overdueTasks.count)",
-                subtitle: overdueTasks.isEmpty ? "problem yok ✓" : "acil dikkat!",
-                color: overdueTasks.isEmpty ? .green : .red,
-                detail: overdueTasks.isEmpty ? "Temiz" : overdueTasks.first?.title ?? ""
-            )
-            
-            statCard(
-                icon: "checkmark.seal.fill",
-                title: "Tamamlanan",
-                value: "\(totalCompleted)",
-                subtitle: "başarı",
-                color: .green,
-                detail: allTasks.isEmpty ? "—" : "%\(Int(Double(totalCompleted) / Double(max(allTasks.count, 1)) * 100)) oran"
-            )
+        let columns = [
+            GridItem(.flexible(), spacing: 16),
+            GridItem(.flexible(), spacing: 16)
+        ]
+        
+        return Group {
+            if sizeClass == .compact {
+                LazyVGrid(columns: columns, spacing: 16) {
+                    statCards
+                }
+            } else {
+                HStack(spacing: 16) {
+                    statCards
+                }
+            }
         }
+    }
+    
+    @ViewBuilder
+    private var statCards: some View {
+        statCard(
+            icon: "sun.max.fill",
+            title: "Bugün",
+            value: "\(todayTasks.count)",
+            subtitle: "\(todayCompleted) tamamlandı",
+            color: .orange,
+            detail: todayTasks.isEmpty ? "Görev yok" : "\(todayTasks.count - todayCompleted) kalan"
+        )
+        
+        statCard(
+            icon: "clock.fill",
+            title: "Bekleyen",
+            value: "\(totalPending)",
+            subtitle: "toplam görev",
+            color: .blue,
+            detail: "\(allTasks.count) toplam"
+        )
+        
+        statCard(
+            icon: "exclamationmark.triangle.fill",
+            title: "Gecikmiş",
+            value: "\(overdueTasks.count)",
+            subtitle: overdueTasks.isEmpty ? "problem yok ✓" : "acil dikkat!",
+            color: overdueTasks.isEmpty ? .green : .red,
+            detail: overdueTasks.isEmpty ? "Temiz" : overdueTasks.first?.title ?? ""
+        )
+        
+        statCard(
+            icon: "checkmark.seal.fill",
+            title: "Tamamlanan",
+            value: "\(totalCompleted)",
+            subtitle: "başarı",
+            color: .green,
+            detail: allTasks.isEmpty ? "—" : "%\(Int(Double(totalCompleted) / Double(max(allTasks.count, 1)) * 100)) oran"
+        )
     }
     
     private func statCard(icon: String, title: String, value: String, subtitle: String, color: Color, detail: String) -> some View {
@@ -688,8 +711,8 @@ struct TodayOverviewView: View {
                 // Dashboard kartları grid
                 LazyVGrid(columns: [
                     GridItem(.flexible(), spacing: 16),
-                    GridItem(.flexible(), spacing: 16)
-                ], spacing: 16) {
+                    GridItem(.flexible(minimum: sizeClass == .compact ? 0 : 200), spacing: 16)
+                ].prefix(sizeClass == .compact ? 1 : 2).map { $0 }, spacing: 16) {
                     ForEach(dashboards) { dashboard in
                         dashboardCard(dashboard)
                     }
@@ -838,6 +861,24 @@ struct TodayOverviewView: View {
         formatter.locale = Locale(identifier: "tr_TR")
         formatter.dateFormat = "EEEE"
         return formatter.string(from: Date()).capitalized
+    }
+    
+    @ViewBuilder
+    private func adaptiveHeaderLayout<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        if sizeClass == .compact {
+            VStack(spacing: 16, content: content)
+        } else {
+            HStack(spacing: 24, content: content)
+        }
+    }
+    
+    @ViewBuilder
+    private func adaptiveContentLayout<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        if sizeClass == .compact {
+            VStack(spacing: 20, content: content)
+        } else {
+            HStack(alignment: .top, spacing: 20, content: content)
+        }
     }
 }
 

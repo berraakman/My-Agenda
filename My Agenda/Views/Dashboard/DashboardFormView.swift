@@ -83,7 +83,11 @@ struct DashboardFormView: View {
                 
                 // Ikon seçici
                 Section("İkon") {
-                    LazyVGrid(columns: Array(repeating: GridItem(.fixed(36), spacing: 8), count: 8), spacing: 8) {
+                    let columns = [
+                        GridItem(.adaptive(minimum: 40, maximum: 40), spacing: 8)
+                    ]
+                    
+                    LazyVGrid(columns: columns, spacing: 10) {
                         ForEach(AppConstants.dashboardIcons, id: \.self) { icon in
                             Button {
                                 selectedIcon = icon
@@ -95,31 +99,36 @@ struct DashboardFormView: View {
                                         ? Color(hex: selectedColor)
                                         : .secondary
                                     )
-                                    .frame(width: 32, height: 32)
+                                    .frame(width: 36, height: 36)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 6)
+                                        RoundedRectangle(cornerRadius: 8)
                                             .fill(selectedIcon == icon ? Color(hex: selectedColor).opacity(0.15) : .clear)
                                     )
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 6)
+                                        RoundedRectangle(cornerRadius: 8)
                                             .stroke(selectedIcon == icon ? Color(hex: selectedColor) : .clear, lineWidth: 1.5)
                                     )
                             }
                             .buttonStyle(.plain)
                         }
                     }
+                    .padding(.vertical, 4)
                 }
                 
                 // Renk seçici
                 Section("Renk") {
-                    LazyVGrid(columns: Array(repeating: GridItem(.fixed(32), spacing: 8), count: 10), spacing: 8) {
+                    let columns = [
+                        GridItem(.adaptive(minimum: 36, maximum: 36), spacing: 8)
+                    ]
+                    
+                    LazyVGrid(columns: columns, spacing: 10) {
                         ForEach(AppConstants.dashboardColors, id: \.self) { colorHex in
                             Button {
                                 selectedColor = colorHex
                             } label: {
                                 Circle()
                                     .fill(Color(hex: colorHex))
-                                    .frame(width: 24, height: 24)
+                                    .frame(width: 28, height: 28)
                                     .overlay(
                                         Circle()
                                             .stroke(Color.primary, lineWidth: selectedColor == colorHex ? 2 : 0)
@@ -129,6 +138,7 @@ struct DashboardFormView: View {
                             .buttonStyle(.plain)
                         }
                     }
+                    .padding(.vertical, 4)
                 }
                 
                 // Önizleme
@@ -175,7 +185,9 @@ struct DashboardFormView: View {
             }
             .padding()
         }
+        #if os(macOS)
         .frame(width: 440, height: 560)
+        #endif
     }
 }
 

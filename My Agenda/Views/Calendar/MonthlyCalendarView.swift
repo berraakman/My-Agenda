@@ -17,6 +17,7 @@ struct MonthlyCalendarView: View {
     // MARK: - Environment
     
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var sizeClass
     
     // MARK: - Query
     
@@ -68,48 +69,66 @@ struct MonthlyCalendarView: View {
             // ════════════════════════════════════════
             // İÇERİK: Takvim + Gün Detayı
             // ════════════════════════════════════════
-            HSplitView {
-                // Sol: Aylık grid
-                VStack(spacing: 0) {
-                    // Gün adları başlığı
-                    weekdayHeader
-                    
-                    Divider()
-                    
-                    // Takvim grid'i
-                    calendarGrid
+                Group {
+                    if sizeClass == .compact {
+                        VStack(spacing: 0) {
+                            calendarSection
+                            Divider()
+                            selectedDayDetail
+                        }
+                    } else {
+                        #if os(macOS)
+                        HSplitView {
+                            calendarSection
+                                .frame(minWidth: 380)
+                            selectedDayDetail
+                                .frame(minWidth: 260, idealWidth: 300)
+                        }
+                        #else
+                        HStack(spacing: 0) {
+                            calendarSection
+                            selectedDayDetail
+                        }
+                        #endif
+                    }
                 }
-                .frame(minWidth: 380)
-                
-                // Sağ: Seçili günün görevleri
-                selectedDayDetail
-                    .frame(minWidth: 260, idealWidth: 300)
-            }
         }
         .sheet(isPresented: $isShowingAddTask) {
             TaskFormView()
         }
     }
     
+    private var calendarSection: some View {
+        VStack(spacing: 0) {
+            weekdayHeader
+            Divider()
+            calendarGrid
+        }
+    }
+    
     // MARK: - Month Navigation Bar
     
     private var monthNavigationBar: some View {
-        HStack(spacing: 16) {
-            Text(monthTitle)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(monthTitle)
+                    .font(.system(size: sizeClass == .compact ? 18 : 20, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+            }
             
             Spacer()
             
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 Button {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         navigateMonth(by: -1)
                     }
                 } label: {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(width: 28, height: 28)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(.quaternary))
+                        .font(.system(size: 14, weight: .bold))
+                        .frame(width: 32, height: 32)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.6)))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 
@@ -120,11 +139,12 @@ struct MonthlyCalendarView: View {
                     }
                 } label: {
                     Text("Bugün")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .padding(.horizontal, 12)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(.blue.opacity(0.12)))
+                        .background(RoundedRectangle(cornerRadius: 8).fill(.blue.opacity(0.12)))
                         .foregroundStyle(.blue)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 
@@ -134,23 +154,36 @@ struct MonthlyCalendarView: View {
                     }
                 } label: {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(width: 28, height: 28)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(.quaternary))
+                        .font(.system(size: 14, weight: .bold))
+                        .frame(width: 32, height: 32)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.6)))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
             
             Divider().frame(height: 20)
             
-            Button {
-                isShowingAddTask = true
-            } label: {
-                Label("Görev Ekle", systemImage: "plus.circle.fill")
-                    .font(.system(size: 13, weight: .medium))
+            if sizeClass == .compact {
+                Button {
+                    isShowingAddTask = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(.blue)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            } else {
+                Button {
+                    isShowingAddTask = true
+                } label: {
+                    Label("Görev Ekle", systemImage: "plus.circle.fill")
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -231,9 +264,8 @@ struct MonthlyCalendarView: View {
                 }
             }
             
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, minHeight: 64)
+        .frame(maxWidth: .infinity, minHeight: sizeClass == .compact ? 54 : 64)
         .padding(4)
         .background(
             RoundedRectangle(cornerRadius: 6)

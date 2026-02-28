@@ -17,6 +17,7 @@ struct DashboardDetailView: View {
     // MARK: - Environment
     
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var sizeClass
     
     // MARK: - Properties
     
@@ -142,7 +143,9 @@ struct DashboardDetailView: View {
             }
         }
         .navigationTitle(dashboard.name)
+        #if os(macOS)
         .frame(minWidth: AppConstants.contentMinWidth)
+        #endif
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
                 // Toplu seçim modu toggle
@@ -340,51 +343,78 @@ struct DashboardDetailView: View {
     // MARK: - Filter Bar
     
     private var filterBar: some View {
-        HStack(spacing: 8) {
-            // Arama alanı
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                TextField("Görev ara...", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
+        Group {
+            if sizeClass == .compact {
+                VStack(spacing: 8) {
+                    searchField
+                        .frame(maxWidth: .infinity)
+                    
+                    HStack {
+                        if isSelectionMode {
+                            Text("\(selectedTasks.count)/\(filteredTasks.count) seçili")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color(hex: dashboard.colorHex))
+                        }
+                        
+                        Spacer()
+                        
+                        filterPicker
                     }
-                    .buttonStyle(.plain)
+                }
+            } else {
+                HStack(spacing: 8) {
+                    searchField
+                        .frame(maxWidth: 200)
+                    
+                    Spacer()
+                    
+                    if isSelectionMode {
+                        Text("\(selectedTasks.count)/\(filteredTasks.count) seçili")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color(hex: dashboard.colorHex))
+                    }
+                    
+                    filterPicker
+                        .frame(maxWidth: 400)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(
-                RoundedRectangle(cornerRadius: AppConstants.smallCornerRadius)
-                    .fill(.quaternary)
-            )
-            .frame(maxWidth: 200)
-            
-            Spacer()
-            
-            if isSelectionMode {
-                Text("\(selectedTasks.count)/\(filteredTasks.count) seçili")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color(hex: dashboard.colorHex))
-            }
-            
-            // Filtre picker
-            Picker("Filtre", selection: $filterOption) {
-                ForEach(TaskFilterOption.allCases) { option in
-                    Text(option.displayName).tag(option)
-                }
-            }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: 400)
         }
+    }
+    
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+            TextField("Görev ara...", text: $searchText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(
+            RoundedRectangle(cornerRadius: AppConstants.smallCornerRadius)
+                .fill(.quaternary)
+        )
+    }
+    
+    private var filterPicker: some View {
+        Picker("Filtre", selection: $filterOption) {
+            ForEach(TaskFilterOption.allCases) { option in
+                Text(option.displayName).tag(option)
+            }
+        }
+        .pickerStyle(.segmented)
     }
 }
 

@@ -211,7 +211,9 @@ struct TaskFormView: View {
             // Footer
             footer
         }
+        #if os(macOS)
         .frame(width: 480, height: 640)
+        #endif
         .onAppear {
             loadExistingData()
         }

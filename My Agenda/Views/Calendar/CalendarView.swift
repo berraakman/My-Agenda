@@ -58,7 +58,9 @@ struct CalendarView: View {
             }
         }
         .navigationTitle("Takvim")
+        #if os(macOS)
         .frame(minWidth: AppConstants.contentMinWidth)
+        #endif
         .onAppear {
             if calendarViewModel == nil {
                 calendarViewModel = CalendarViewModel(calendarService: calendarService)
@@ -69,16 +71,16 @@ struct CalendarView: View {
     // MARK: - Tab Picker
     
     private var tabPicker: some View {
-        HStack {
+        VStack(spacing: 8) {
             Picker("Görünüm", selection: $selectedTab) {
                 ForEach(CalendarTab.allCases) { tab in
                     Label(tab.displayName, systemImage: tab.icon).tag(tab)
                 }
             }
             .pickerStyle(.segmented)
+            #if os(macOS)
             .frame(maxWidth: 400)
-            
-            Spacer()
+            #endif
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -174,7 +176,9 @@ struct CalendarView: View {
                 .listStyle(.inset)
             }
         }
+        #if os(macOS)
         .frame(width: 440, height: 380)
+        #endif
     }
 }
 

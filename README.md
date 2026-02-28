@@ -1,60 +1,71 @@
 # My Agenda 📋✨
 
-My Agenda, macOS ve iOS platformları için geliştirilmiş, modern, minimalist ve kullanıcı dostu bir kişisel yönetim uygulamasıdır. Günlük görevlerinizi, projelerinizi ve ajandanızı tek bir merkezden, şık bir arayüzle yönetmenize olanak tanır.
+**My Agenda**, macOS ve iOS platformları için sıfırdan tasarlanmış, Apple ekosistemine tam uyumlu, modern ve kristal netliğinde bir kişisel yönetim uygulamasıdır. Günlük görevlerinizi, projelerinizi ve ajandanızı tek bir merkezden, premium bir kullanıcı deneyimiyle yönetmenize olanak tanır.
 
 ---
 
-## 🚀 Özellikler
+## 📱 iPhone 16 & iOS İçin Ultra Optimizasyon
+Uygulama, en yeni iPhone modellerinde (iPhone 16 ve Pro serisi) kusursuz çalışacak şekilde optimize edilmiştir:
+- **İnteraktif Kayan Menü (Swipe to Open):** Ekranın sol kenarından parmağınızı kaydırarak erişebileceğiniz akıcı ve modern sidebar deneyimi.
+- **44x44 Dokunmatik Standartlar:** Tüm butonlar ve etkileşimli alanlar Apple'ın erişilebilirlik standartlarına uygun olarak tasarlanmıştır.
+- **Duyarlı (Responsive) Formlar:** Dashboard ekleme ve düzenleme ekranları, renk paletleri ve ikonlar tüm ekran boyutlarına tam sığacak şekilde otomatik uyarlanır.
+- **Hız ve Yumuşaklık:** iOS'in yüksek yenileme hızına (ProMotion) tam uyumlu, yaylı (`spring`) animasyonlar ile yağ gibi akıcı geçişler.
+
+---
+
+## 💻 macOS Deneyimi
+Mac kullanıcıları için gerçek bir "Native" deneyim sunar:
+- **3 Sütunlu (Three-Column) Layout:** Sidebar, içerik listesi ve detay paneli ile masaüstü verimliliğini maksimize eder.
+- **Mac'e Özel Kısayollar:** `Enter` ile kaydetme, `Esc` ile çıkma gibi yerleşik klavye desteği.
+- **Dinamik Pencere Yönetimi:** Pencere boyutuna göre otomatik olarak şekil değiştiren akıllı arayüz.
+
+---
+
+## 🚀 Öne Çıkan Özellikler
 
 - **Dashboard Sistemi:** Görevlerinizi kategorize edin ve projelerinize göre Dashboard'lar oluşturun.
 - **Akıllı Takvim Görünümleri:**
   - **Aylık Takvim:** Tüm ayı tek bakışta görün, görev yoğunluğunu takip edin.
-  - **Haftalık Ajanda:** Haftalık planınızı detaylı saat aralıklarıyla yönetin.
+  - **Haftalık Ajanda:** Haftalık planınızı detaylı saat aralıklarıyla (Time-Blocking) yönetin.
 - **Gelişmiş Görev Yönetimi:**
   - **Tekrarlayan Görevler:** Günlük, haftalık, aylık veya belirli günlere özel (Pzt, Çar vb.) tekrarlar oluşturun.
-  - **Dinamik Bitiş:** Tekrarlayan görevlerinize bir "Son Tarih" ekleyerek o tarihten sonra otomatik olarak durmasını sağlayın.
   - **Önceliklendirme:** Yüksek, orta ve düşük öncelik etiketleriyle acil işlerinizi belirleyin.
-- **Bildirim ve Anımsatıcılar:** Önemli görevleriniz için macOS/iOS sistem bildirimlerini kullanarak zamanında hatırlatmalar alın.
-- **Apple Takvim Entegrasyonu:** (Opsiyonel) Etkinliklerinizi Apple Calendar ile senkronize edin ve tüm cihazlarınızdan erişin.
-- **İstatistikler:** Tamamlanan görevleri ve dashboard bazlı ilerlemenizi görsel grafiklerle takip edin.
-- **Modern Tasarım:** Apple ekosistemine tam uyumlu, Dark Mode destekli, temiz ve premium kullanıcı deneyimi.
+- **Apple Takvim & Bildirimler:** Görevlerinizi Apple Calendar ile (Opsiyonel) senkronize edin ve sistem bildirimleriyle hiçbir şeyi unutmayın.
+- **Premium İstatistikler:** Verimliliğinizi görsel grafiklerle (Apple Charts) takip edin.
 
 ---
 
 ## 🛠 Teknoloji Yığını
 
 - **Dil:** Swift 5.10+
-- **Framework:** SwiftUI (Declarative UI)
-- **Veri Yönetimi:** SwiftData (Modern kalıcı veri saklama)
-- **Frameworkler:**
-  - `UserNotifications`: Akıllı anımsatıcılar için.
-  - `EventKit`: Apple Takvim entegrasyonu için.
-  - `Charts`: Verimlilik istatistikleri için.
-- **Mimari:** MVVM (Model-View-ViewModel)
+- **Framework:** SwiftUI (Modern, Declarative UI)
+- **Veri Yönetimi:** SwiftData (Kalıcı ve yerel veri saklama)
+- **Grafikler:** Swift Charts
+- **Mimari:** Clean Architecture (MVVM)
 
 ---
 
-## 📦 Kurulum
+## 📦 Kurulum ve Geliştirme
 
 1. Bu depoyu klonlayın:
    ```bash
    git clone https://github.com/berraakman/My-Agenda.git
    ```
-2. `My Agenda.xcodeproj` dosyasını Xcode (Sürüm 15.0+) ile açın.
-3. Simülatör veya gerçek cihazınızı seçin.
+2. `My Agenda.xcodeproj` dosyasını Xcode 15.0+ ile açın.
+3. iPhone veya Mac target'ını seçin.
 4. `⌘ + R` tuşlarına basarak uygulamayı çalıştırın.
+
+*(Not: iCloud senkronizasyonunu aktifleştirmek için "Signing & Capabilities" altından CloudKit'i kendi Bundle ID'niz ile etkinleştirmeniz gerekmektedir.)*
 
 ---
 
-## 🎨 Tasarım ve İkon
-
-Uygulama ikonu, macOS'in modern "Squircle" (oval kare) formuna uygun olarak tasarlanmış ve şeffaflık ayarları yüksek çözünürlükte optimize edilmiştir. Uygulama içinde de minimalist ve odaklanmayı artıran bir renk paleti kullanılmıştır.
+## 🎨 Tasarım Estetiği
+Uygulama, Apple'ın modern tasarım dili olan **Glassmorphism** ve **Vibrant Colors** üzerine inşa edilmiştir. Koyu mod (Dark Mode) desteği ile göz yormayan, premium bir görünüm sunar.
 
 ---
 
 ## 📄 Lisans
-
-Bu proje Berra Akman tarafından geliştirilmiştir. Tüm hakları saklıdır.
+Bu proje **Berra Akman** tarafından geliştirilmiştir. Tüm hakları saklıdır.
 
 ---
 

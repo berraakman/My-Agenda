@@ -125,12 +125,14 @@ struct SidebarView: View {
             // ════════════════════════════════════════
             sidebarFooter
         }
+        #if os(macOS)
         .frame(minWidth: AppConstants.sidebarMinWidth)
         .navigationSplitViewColumnWidth(
             min: AppConstants.sidebarMinWidth,
             ideal: AppConstants.sidebarIdealWidth,
             max: 360
         )
+        #endif
         .background(sidebarBackground)
         // MARK: - Toolbar
         .toolbar {
@@ -252,51 +254,12 @@ struct SidebarView: View {
         let isHovered = hoveredItem == item
         
         return Button {
-            withAnimation(.easeInOut(duration: 0.15)) {
+            withAnimation(.easeInOut(duration: 0.2)) {
                 selectedItem = item
             }
         } label: {
-            HStack(spacing: 12) {
-                // İkon
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(isSelected ? .white : iconColor)
-                    .frame(width: 28, height: 28)
-                    .background(
-                        RoundedRectangle(cornerRadius: 7)
-                            .fill(isSelected ? iconColor : iconColor.opacity(0.12))
-                    )
-                
-                // Label
-                Text(label)
-                    .font(.system(size: 14, weight: isSelected ? .semibold : .medium, design: .rounded))
-                    .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.8))
-                
-                Spacer()
-                
-                // Badge
-                if let badge = badge, badge > 0 {
-                    Text("\(badge)")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundStyle(isSelected ? .primary : .secondary)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule()
-                                .fill(isSelected ? .white.opacity(0.2) : .primary.opacity(0.06))
-                        )
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(
-                        isSelected ? iconColor.opacity(0.18) :
-                        isHovered ? .primary.opacity(0.04) :
-                        .clear
-                    )
-            )
+            buttonContent(isSelected: isSelected, isHovered: isHovered, icon: icon, label: label, badge: badge, iconColor: iconColor)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 8)
@@ -305,6 +268,50 @@ struct SidebarView: View {
                 hoveredItem = hovering ? item : nil
             }
         }
+    }
+    
+    private func buttonContent(isSelected: Bool, isHovered: Bool, icon: String, label: String, badge: Int?, iconColor: Color) -> some View {
+        HStack(spacing: 12) {
+            // İkon
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(isSelected ? .white : iconColor)
+                .frame(width: 28, height: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(isSelected ? iconColor : iconColor.opacity(0.12))
+                )
+            
+            // Label
+            Text(label)
+                .font(.system(size: 14, weight: isSelected ? .semibold : .medium, design: .rounded))
+                .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.8))
+            
+            Spacer()
+            
+            // Badge
+            if let badge = badge, badge > 0 {
+                Text("\(badge)")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(isSelected ? .primary : .secondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule()
+                            .fill(isSelected ? .white.opacity(0.2) : .primary.opacity(0.06))
+                    )
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(
+                    isSelected ? iconColor.opacity(0.18) :
+                    isHovered ? .primary.opacity(0.04) :
+                    .clear
+                )
+        )
     }
     
     // MARK: - Dashboard Button
@@ -320,57 +327,8 @@ struct SidebarView: View {
                 selectedItem = item
             }
         } label: {
-            HStack(spacing: 12) {
-                // Dashboard ikonu
-                Image(systemName: dashboard.icon)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(isSelected ? .white : color)
-                    .frame(width: 28, height: 28)
-                    .background(
-                        RoundedRectangle(cornerRadius: 7)
-                            .fill(isSelected ? color : color.opacity(0.12))
-                    )
-                
-                // Dashboard adı
-                Text(dashboard.name)
-                    .font(.system(size: 14, weight: isSelected ? .semibold : .medium, design: .rounded))
-                    .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.8))
-                    .lineLimit(1)
-                
-                Spacer()
-                
-                // Progress + badge
-                HStack(spacing: 6) {
-                    ProgressRingView(
-                        progress: dashboard.completionPercentage,
-                        color: color,
-                        lineWidth: 2,
-                        size: 18
-                    )
-                    
-                    if dashboard.pendingTaskCount > 0 {
-                        Text("\(dashboard.pendingTaskCount)")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundStyle(isSelected ? .primary : .secondary)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .background(
-                                Capsule()
-                                    .fill(isSelected ? .white.opacity(0.2) : .primary.opacity(0.06))
-                            )
-                    }
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(
-                        isSelected ? color.opacity(0.15) :
-                        isHovered ? .primary.opacity(0.04) :
-                        .clear
-                    )
-            )
+            dashboardButtonContent(dashboard: dashboard, isSelected: isSelected, isHovered: isHovered, color: color)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 8)
@@ -396,6 +354,60 @@ struct SidebarView: View {
                 Label("Sil", systemImage: "trash")
             }
         }
+    }
+    
+    private func dashboardButtonContent(dashboard: Dashboard, isSelected: Bool, isHovered: Bool, color: Color) -> some View {
+        HStack(spacing: 12) {
+            // Dashboard ikonu
+            Image(systemName: dashboard.icon)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(isSelected ? .white : color)
+                .frame(width: 28, height: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(isSelected ? color : color.opacity(0.12))
+                )
+            
+            // Dashboard adı
+            Text(dashboard.name)
+                .font(.system(size: 14, weight: isSelected ? .semibold : .medium, design: .rounded))
+                .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.8))
+                .lineLimit(1)
+            
+            Spacer()
+            
+            // Progress + badge
+            HStack(spacing: 6) {
+                ProgressRingView(
+                    progress: dashboard.completionPercentage,
+                    color: color,
+                    lineWidth: 2,
+                    size: 18
+                )
+                
+                if dashboard.pendingTaskCount > 0 {
+                    Text("\(dashboard.pendingTaskCount)")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(isSelected ? .primary : .secondary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(isSelected ? .white.opacity(0.2) : .primary.opacity(0.06))
+                        )
+                }
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(
+                    isSelected ? color.opacity(0.15) :
+                    isHovered ? .primary.opacity(0.04) :
+                    .clear
+                )
+        )
     }
     
     // MARK: - Footer
@@ -487,7 +499,11 @@ struct NewDashboardSheet: View {
                 }
                 
                 Section("İkon") {
-                    LazyVGrid(columns: Array(repeating: GridItem(.fixed(40), spacing: 8), count: 8), spacing: 8) {
+                    let columns = [
+                        GridItem(.adaptive(minimum: 40, maximum: 40), spacing: 8)
+                    ]
+                    
+                    LazyVGrid(columns: columns, spacing: 8) {
                         ForEach(AppConstants.dashboardIcons, id: \.self) { icon in
                             Button {
                                 selectedIcon = icon
@@ -512,10 +528,15 @@ struct NewDashboardSheet: View {
                             .buttonStyle(.plain)
                         }
                     }
+                    .padding(.vertical, 4)
                 }
                 
                 Section("Renk") {
-                    LazyVGrid(columns: Array(repeating: GridItem(.fixed(36), spacing: 8), count: 10), spacing: 8) {
+                    let columns = [
+                        GridItem(.adaptive(minimum: 36, maximum: 36), spacing: 8)
+                    ]
+                    
+                    LazyVGrid(columns: columns, spacing: 8) {
                         ForEach(AppConstants.dashboardColors, id: \.self) { colorHex in
                             Button {
                                 selectedColor = colorHex
@@ -532,6 +553,7 @@ struct NewDashboardSheet: View {
                             .buttonStyle(.plain)
                         }
                     }
+                    .padding(.vertical, 4)
                 }
                 
                 Section("Önizleme") {
@@ -576,7 +598,9 @@ struct NewDashboardSheet: View {
             }
             .padding()
         }
+        #if os(macOS)
         .frame(width: 480, height: 600)
+        #endif
     }
 }
 

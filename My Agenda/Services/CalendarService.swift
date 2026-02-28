@@ -48,11 +48,19 @@ final class CalendarService {
     func requestAccess() async -> Bool {
         do {
             let granted: Bool
+            #if os(macOS)
             if #available(macOS 14.0, *) {
                 granted = try await eventStore.requestFullAccessToEvents()
             } else {
                 granted = try await eventStore.requestAccess(to: .event)
             }
+            #else
+            if #available(iOS 17.0, *) {
+                granted = try await eventStore.requestFullAccessToEvents()
+            } else {
+                granted = try await eventStore.requestAccess(to: .event)
+            }
+            #endif
             await MainActor.run {
                 updateAuthorizationStatus()
             }
@@ -67,11 +75,19 @@ final class CalendarService {
     
     /// İzin verilmiş mi?
     var isAuthorized: Bool {
+        #if os(macOS)
         if #available(macOS 14.0, *) {
             return authorizationStatus == .fullAccess || authorizationStatus == .authorized
         } else {
             return authorizationStatus == .authorized
         }
+        #else
+        if #available(iOS 17.0, *) {
+            return authorizationStatus == .fullAccess || authorizationStatus == .writeOnly
+        } else {
+            return authorizationStatus == .authorized
+        }
+        #endif
     }
     
     // MARK: - Read Events

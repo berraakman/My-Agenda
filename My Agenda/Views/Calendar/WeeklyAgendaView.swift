@@ -18,6 +18,7 @@ struct WeeklyAgendaView: View {
     // MARK: - Environment
     
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var sizeClass
     
     // MARK: - Query
     
@@ -94,12 +95,16 @@ struct WeeklyAgendaView: View {
                     // Sol: Saat etiketleri
                     timeLabelsColumn
                     
-                    // 7 gün sütunları
-                    ForEach(weekDays, id: \.self) { day in
-                        dayColumn(for: day)
-                        
-                        if day != weekDays.last {
-                            Divider()
+                    if sizeClass == .compact {
+                        dayColumn(for: selectedDay)
+                    } else {
+                        // 7 gün sütunları
+                        ForEach(weekDays, id: \.self) { day in
+                            dayColumn(for: day)
+                            
+                            if day != weekDays.last {
+                                Divider()
+                            }
                         }
                     }
                 }
@@ -118,19 +123,16 @@ struct WeeklyAgendaView: View {
     
     private var weekNavigationBar: some View {
         HStack(spacing: 16) {
-            // Hafta numarası badge
-            Text("Hafta \(weekNumber)")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(
-                    Capsule().fill(.blue.gradient)
-                )
-            
             // Hafta başlığı
-            Text(weekTitle)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(weekTitle)
+                    .font(.system(size: sizeClass == .compact ? 15 : 18, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                
+                Text("Hafta \(weekNumber)")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(.blue)
+            }
             
             Spacer()
             
@@ -192,11 +194,12 @@ struct WeeklyAgendaView: View {
             Button {
                 isShowingAddTask = true
             } label: {
-                Label("Görev Ekle", systemImage: "plus.circle.fill")
-                    .font(.system(size: 13, weight: .medium))
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.blue)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -537,7 +540,9 @@ struct WeeklyAgendaView: View {
             }
             .padding()
         }
+        #if os(macOS)
         .frame(width: 360, height: 320)
+        #endif
     }
     
     // MARK: - Helpers
