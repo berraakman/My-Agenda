@@ -37,6 +37,7 @@ struct TaskListView: View {
     @State private var filterOption: TaskFilterOption = .all
     @State private var sortOption: TaskSortOption = .dateDesc
     @State private var isShowingAddTask = false
+    @State private var isCompletedExpanded = true
     
     /// Toplu işlem state
     @State private var isSelectionMode = false
@@ -85,60 +86,25 @@ struct TaskListView: View {
                         .padding(.vertical, 4)
                     }
                 } else {
-                    // Normal mod
-                    List(filteredTasks, selection: $selectedTask) { task in
-                        TaskRowView(task: task) {
-                            withAnimation(AppConstants.springAnimation) {
-                                task.toggleCompletion()
+                    // Normal mod — sectioned list
+                    List(selection: $selectedTask) {
+                        // ── Bekleyen Görevler ──
+                        if !pendingFilteredTasks.isEmpty {
+                            Section {
+                                ForEach(pendingFilteredTasks) { task in
+                                    taskRow(task)
+                                }
                             }
                         }
-                        .tag(task)
-                        .contextMenu {
-                            Button {
-                                task.toggleCompletion()
-                            } label: {
-                                Label(
-                                    task.isCompleted ? "Geri Al" : "Tamamla",
-                                    systemImage: task.isCompleted ? "arrow.uturn.backward" : "checkmark"
-                                )
-                            }
-                            
-                            Button {
-                                selectedTask = task
-                            } label: {
-                                Label("Düzenle", systemImage: "pencil")
-                            }
-                            
-                            Menu {
-                                Button {
-                                    task.dashboard = nil
-                                } label: {
-                                    Text("Hiçbiri")
+                        
+                        // ── Tamamlanan Görevler ──
+                        if !completedFilteredTasks.isEmpty {
+                            Section {
+                                ForEach(completedFilteredTasks) { task in
+                                    taskRow(task)
                                 }
-                                
-                                ForEach(dashboards) { d in
-                                    Button {
-                                        task.dashboard = d
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: d.icon)
-                                            Text(d.name)
-                                        }
-                                    }
-                                }
-                            } label: {
-                                Label("Taşı", systemImage: "folder")
-                            }
-                            
-                            Divider()
-                            
-                            Button(role: .destructive) {
-                                if selectedTask?.id == task.id {
-                                    selectedTask = nil
-                                }
-                                modelContext.delete(task)
-                            } label: {
-                                Label("Sil", systemImage: "trash")
+                            } header: {
+                                completedSectionHeader
                             }
                         }
                     }
@@ -385,6 +351,100 @@ struct TaskListView: View {
         }
     }
     
+    // MARK: - Task Row Builder
+    
+    @ViewBuilder
+    private func taskRow(_ task: AgendaTask) -> some View {
+        TaskRowView(task: task) {
+            withAnimation(AppConstants.springAnimation) {
+                task.toggleCompletion()
+            }
+        }
+        .tag(task)
+        .contextMenu {
+            Button {
+                task.toggleCompletion()
+            } label: {
+                Label(
+                    task.isCompleted ? "Geri Al" : "Tamamla",
+                    systemImage: task.isCompleted ? "arrow.uturn.backward" : "checkmark"
+                )
+            }
+            
+            Button {
+                selectedTask = task
+            } label: {
+                Label("Düzenle", systemImage: "pencil")
+            }
+            
+            Menu {
+                Button {
+                    task.dashboard = nil
+                } label: {
+                    Text("Hiçbiri")
+                }
+                
+                ForEach(dashboards) { d in
+                    Button {
+                        task.dashboard = d
+                    } label: {
+                        HStack {
+                            Image(systemName: d.icon)
+                            Text(d.name)
+                        }
+                    }
+                }
+            } label: {
+                Label("Taşı", systemImage: "folder")
+            }
+            
+            Divider()
+            
+            Button(role: .destructive) {
+                if selectedTask?.id == task.id {
+                    selectedTask = nil
+                }
+                modelContext.delete(task)
+            } label: {
+                Label("Sil", systemImage: "trash")
+            }
+        }
+    }
+    
+    // MARK: - Completed Section Header
+    
+    private var completedSectionHeader: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                isCompletedExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: isCompletedExpanded ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.secondary)
+                
+                Text("Tamamlandı")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                
+                Text("\(completedFilteredTasks.count)")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(.green)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule()
+                            .fill(.green.opacity(0.12))
+                    )
+                
+                Spacer()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+    
     // MARK: - Filtered Tasks
     
     private var filteredTasks: [AgendaTask] {
@@ -429,6 +489,16 @@ struct TaskListView: View {
         }
         
         return tasks
+    }
+    
+    /// Bekleyen (tamamlanmamış) görevler
+    private var pendingFilteredTasks: [AgendaTask] {
+        filteredTasks.filter { !$0.isCompleted }
+    }
+    
+    /// Tamamlanmış görevler
+    private var completedFilteredTasks: [AgendaTask] {
+        filteredTasks.filter { $0.isCompleted }
     }
     
     // MARK: - Empty State Helpers

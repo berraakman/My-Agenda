@@ -36,6 +36,7 @@ struct TodayOverviewView: View {
     @State private var isShowingAddTask = false
     @State private var currentTime = Date()
     @State private var hoveredDashboard: Dashboard?
+    @State private var isCompletedExpandedToday = true
     
     // Timer
     private let timer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
@@ -75,6 +76,16 @@ struct TodayOverviewView: View {
     
     private var totalCompleted: Int {
         allTasks.filter { $0.isCompleted }.count
+    }
+    
+    /// Bugünün bekleyen görevleri
+    private var todayPendingTasks: [AgendaTask] {
+        todayTasks.filter { !$0.isCompleted }
+    }
+    
+    /// Bugünün tamamlanan görevleri
+    private var todayCompletedTasks: [AgendaTask] {
+        todayTasks.filter { $0.isCompleted }
     }
     
     private var greeting: String {
@@ -429,8 +440,49 @@ struct TodayOverviewView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 32)
             } else {
-                ForEach(todayTasks) { task in
+                // ── Bekleyen görevler ──
+                ForEach(todayPendingTasks) { task in
                     todayTaskRow(task)
+                }
+                
+                // ── Tamamlanan görevler ──
+                if !todayCompletedTasks.isEmpty {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            isCompletedExpandedToday.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: isCompletedExpandedToday ? "chevron.down" : "chevron.right")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.secondary)
+                            
+                            Text("Tamamlandı")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundStyle(.secondary)
+                            
+                            Text("\(todayCompletedTasks.count)")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(.green)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill(.green.opacity(0.12))
+                                )
+                            
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 8)
+                    
+                    if isCompletedExpandedToday {
+                        ForEach(todayCompletedTasks) { task in
+                            todayTaskRow(task)
+                        }
+                    }
                 }
             }
         }
