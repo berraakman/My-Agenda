@@ -149,6 +149,8 @@ final class TaskViewModel {
         
         // Sıralama uygula
         switch sortOption {
+        case .custom:
+            filtered.sort { $0.sortIndex < $1.sortIndex }
         case .dateDesc:
             filtered.sort { $0.createdAt > $1.createdAt }
         case .dateAsc:
@@ -170,6 +172,7 @@ final class TaskViewModel {
 // MARK: - TaskSortOption
 
 enum TaskSortOption: String, CaseIterable, Identifiable {
+    case custom = "Özel Sıralama"
     case dateDesc = "En Yeni"
     case dateAsc = "En Eski"
     case priorityDesc = "Öncelik (Yüksek→Düşük)"

@@ -32,6 +32,7 @@ struct DashboardDetailView: View {
     @State private var isShowingAddTask = false
     @State private var isShowingEditDashboard = false
     @State private var filterOption: TaskFilterOption = .all
+    @State private var sortOption: TaskSortOption = .custom
     @State private var searchText = ""
     
     /// Toplu işlem state
@@ -92,6 +93,7 @@ struct DashboardDetailView: View {
                                 ForEach(pendingFilteredTasks) { task in
                                     dashboardTaskRow(task)
                                 }
+                                .onMove(perform: movePendingTask)
                             }
                         }
                         
@@ -116,6 +118,9 @@ struct DashboardDetailView: View {
         #endif
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
+                // Sıralama menüsü
+                sortMenu
+                
                 // Toplu seçim modu toggle
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -381,9 +386,22 @@ struct DashboardDetailView: View {
             }
         }
         
-        // Sıralama: öncelik sırasına göre
-        return tasks.sorted { a, b in
-            a.priority.sortOrder > b.priority.sortOrder
+        // Sıralama
+        switch sortOption {
+        case .custom:
+            return tasks.sorted { $0.sortIndex < $1.sortIndex }
+        case .dateDesc:
+            return tasks.sorted { $0.createdAt > $1.createdAt }
+        case .dateAsc:
+            return tasks.sorted { $0.createdAt < $1.createdAt }
+        case .priorityDesc:
+            return tasks.sorted { $0.priority.sortOrder > $1.priority.sortOrder }
+        case .priorityAsc:
+            return tasks.sorted { $0.priority.sortOrder < $1.priority.sortOrder }
+        case .dueDateAsc:
+            return tasks.sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
+        case .alphabetical:
+            return tasks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         }
     }
     
@@ -395,6 +413,57 @@ struct DashboardDetailView: View {
     /// Tamamlanmış görevler
     private var completedFilteredTasks: [AgendaTask] {
         filteredTasks.filter { $0.isCompleted }
+    }
+    
+    // MARK: - Drag & Drop
+    
+    /// Bekleyen görevlerin sırasını sürükle-bırak ile değiştirir
+    private func movePendingTask(from source: IndexSet, to destination: Int) {
+        // Sürükleme yapıldığında otomatik olarak özel sıralamaya geç
+        sortOption = .custom
+        
+        var pending = pendingFilteredTasks
+        pending.move(fromOffsets: source, toOffset: destination)
+        
+        for (index, task) in pending.enumerated() {
+            task.sortIndex = index
+        }
+        
+        let completedTasks = completedFilteredTasks
+        for (index, task) in completedTasks.enumerated() {
+            task.sortIndex = pending.count + index
+        }
+    }
+    
+    // MARK: - Sort Menu
+    
+    private var sortMenu: some View {
+        Menu {
+            ForEach(TaskSortOption.allCases) { option in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        sortOption = option
+                    }
+                } label: {
+                    HStack {
+                        if option == .custom {
+                            Image(systemName: "hand.draw")
+                        }
+                        Text(option.displayName)
+                        if sortOption == option {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Label(
+                sortOption == .custom ? "Özel Sıralama" : "Sırala",
+                systemImage: sortOption == .custom ? "hand.draw.fill" : "arrow.up.arrow.down"
+            )
+            .font(.system(size: 13))
+            .foregroundStyle(sortOption == .custom ? Color(hex: dashboard.colorHex) : .primary)
+        }
     }
     
     private var emptyMessage: String {

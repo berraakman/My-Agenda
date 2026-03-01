@@ -63,6 +63,11 @@ final class AgendaTask {
     
     // MARK: - Calendar Integration
     
+    // MARK: - Custom Ordering
+    
+    /// Kullanıcının sürükle-bırak ile belirlediği özel sıralama indeksi
+    var sortIndex: Int = 0
+    
     /// Görevin Apple Calendar'a eklenip eklenmeyeceği durumu
     var addToCalendar: Bool = false
     
@@ -92,6 +97,7 @@ final class AgendaTask {
         isRecurring: Bool = false,
         recurrenceType: RecurrenceType? = nil,
         recurringDaysOfWeek: [Int]? = nil,
+        sortIndex: Int = 0,
         addToCalendar: Bool = false,
         calendarEventId: String? = nil,
         dashboard: Dashboard? = nil
@@ -108,6 +114,7 @@ final class AgendaTask {
         self.isRecurring = isRecurring
         self.recurrenceType = recurrenceType
         self.recurringDaysOfWeek = recurringDaysOfWeek
+        self.sortIndex = sortIndex
         self.addToCalendar = addToCalendar
         self.calendarEventId = calendarEventId
         self.dashboard = dashboard

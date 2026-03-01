@@ -94,6 +94,7 @@ struct TaskListView: View {
                                 ForEach(pendingFilteredTasks) { task in
                                     taskRow(task)
                                 }
+                                .onMove(perform: movePendingTask)
                             }
                         }
                         
@@ -193,9 +194,14 @@ struct TaskListView: View {
         Menu {
             ForEach(TaskSortOption.allCases) { option in
                 Button {
-                    sortOption = option
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        sortOption = option
+                    }
                 } label: {
                     HStack {
+                        if option == .custom {
+                            Image(systemName: "hand.draw")
+                        }
                         Text(option.displayName)
                         if sortOption == option {
                             Image(systemName: "checkmark")
@@ -204,8 +210,12 @@ struct TaskListView: View {
                 }
             }
         } label: {
-            Label("Sırala", systemImage: "arrow.up.arrow.down")
-                .font(.system(size: 13))
+            Label(
+                sortOption == .custom ? "Özel Sıralama" : "Sırala",
+                systemImage: sortOption == .custom ? "hand.draw.fill" : "arrow.up.arrow.down"
+            )
+            .font(.system(size: 13))
+            .foregroundStyle(sortOption == .custom ? .blue : .primary)
         }
     }
     
@@ -474,6 +484,8 @@ struct TaskListView: View {
         
         // Sıralama
         switch sortOption {
+        case .custom:
+            tasks.sort { $0.sortIndex < $1.sortIndex }
         case .dateDesc:
             tasks.sort { $0.createdAt > $1.createdAt }
         case .dateAsc:
@@ -499,6 +511,28 @@ struct TaskListView: View {
     /// Tamamlanmış görevler
     private var completedFilteredTasks: [AgendaTask] {
         filteredTasks.filter { $0.isCompleted }
+    }
+    
+    // MARK: - Drag & Drop
+    
+    /// Bekleyen görevlerin sırasını sürükle-bırak ile değiştirir
+    private func movePendingTask(from source: IndexSet, to destination: Int) {
+        // Sürükleme yapıldığında otomatik olarak özel sıralamaya geç
+        sortOption = .custom
+        
+        var pending = pendingFilteredTasks
+        pending.move(fromOffsets: source, toOffset: destination)
+        
+        // Her bir göreve yeni sortIndex değeri ata
+        for (index, task) in pending.enumerated() {
+            task.sortIndex = index
+        }
+        
+        // Tamamlanan görevlere de sortIndex ata (pending'den sonra)
+        let completedTasks = completedFilteredTasks
+        for (index, task) in completedTasks.enumerated() {
+            task.sortIndex = pending.count + index
+        }
     }
     
     // MARK: - Empty State Helpers
