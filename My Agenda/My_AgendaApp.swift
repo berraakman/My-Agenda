@@ -41,7 +41,8 @@ struct My_AgendaApp: App {
         // Veriler otomatik olarak disk'e kalıcı olarak kaydedilir.
         .modelContainer(for: [
             Dashboard.self,
-            AgendaTask.self
+            AgendaTask.self,
+            DashboardFolder.self
         ])
         // MARK: - Window Settings
         .defaultSize(

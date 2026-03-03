@@ -32,6 +32,9 @@ struct TaskFormView: View {
     /// Varsayılan dashboard (yeni görev eklerken)
     let defaultDashboard: Dashboard?
     
+    /// Varsayılan klasör (yeni görev eklerken)
+    let defaultFolder: DashboardFolder?
+    
     // MARK: - State
     
     @State private var title: String = ""
@@ -46,6 +49,7 @@ struct TaskFormView: View {
     @State private var recurrenceType: RecurrenceType = .daily
     @State private var recurringDaysOfWeek: [Int] = []
     @State private var selectedDashboard: Dashboard?
+    @State private var selectedFolder: DashboardFolder?
     
     // MARK: - Computed
     
@@ -62,15 +66,17 @@ struct TaskFormView: View {
     // MARK: - Init
     
     /// Yeni görev modu
-    init(dashboard: Dashboard? = nil) {
+    init(dashboard: Dashboard? = nil, folder: DashboardFolder? = nil) {
         self.existingTask = nil
         self.defaultDashboard = dashboard
+        self.defaultFolder = folder
     }
     
     /// Düzenleme modu
     init(task: AgendaTask) {
         self.existingTask = task
         self.defaultDashboard = task.dashboard
+        self.defaultFolder = task.folder
     }
     
     // MARK: - Body
@@ -202,6 +208,23 @@ struct TaskFormView: View {
                             .tag(dashboard as Dashboard?)
                         }
                     }
+                    
+                    // Klasör seçimi (sadece seçili dashboard'un klasörleri varsa)
+                    if let dash = selectedDashboard, !dash.folders.isEmpty {
+                        Picker("Klasör", selection: $selectedFolder) {
+                            Text("Genel (Klasörsüz)")
+                                .tag(nil as DashboardFolder?)
+                            
+                            ForEach(dash.folders.sorted(by: { $0.sortIndex < $1.sortIndex })) { folder in
+                                HStack {
+                                    Image(systemName: folder.icon)
+                                        .foregroundStyle(Color(hex: folder.colorHex))
+                                    Text(folder.name)
+                                }
+                                .tag(folder as DashboardFolder?)
+                            }
+                        }
+                    }
                 }
             }
             .formStyle(.grouped)
@@ -216,6 +239,12 @@ struct TaskFormView: View {
         #endif
         .onAppear {
             loadExistingData()
+        }
+        .onChange(of: selectedDashboard) { _, newDashboard in
+            // Dashboard değiştiğinde klasör seçimini sıfırla
+            if newDashboard?.id != selectedFolder?.dashboard?.id {
+                selectedFolder = nil
+            }
         }
     }
     
@@ -278,8 +307,10 @@ struct TaskFormView: View {
             recurrenceType = task.recurrenceType ?? .daily
             recurringDaysOfWeek = task.recurringDaysOfWeek ?? []
             selectedDashboard = task.dashboard
+            selectedFolder = task.folder
         } else {
             selectedDashboard = defaultDashboard
+            selectedFolder = defaultFolder
         }
     }
     
@@ -299,6 +330,7 @@ struct TaskFormView: View {
             task.recurrenceType = isRecurring ? recurrenceType : nil
             task.recurringDaysOfWeek = (isRecurring && recurrenceType == .customDays) ? recurringDaysOfWeek : nil
             task.dashboard = selectedDashboard
+            task.folder = selectedDashboard != nil ? selectedFolder : nil
         }
         
         let savedTask = existingTask ?? {
@@ -314,6 +346,7 @@ struct TaskFormView: View {
                 addToCalendar: addToCalendar,
                 dashboard: selectedDashboard
             )
+            newTask.folder = selectedDashboard != nil ? selectedFolder : nil
             modelContext.insert(newTask)
             return newTask
         }()

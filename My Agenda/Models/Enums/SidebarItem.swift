@@ -21,6 +21,9 @@ enum SidebarItem: Hashable {
     /// Belirli bir dashboard'un görevleri
     case dashboard(Dashboard)
     
+    /// Belirli bir klasörün görevleri
+    case folder(DashboardFolder)
+    
     /// Takvim (Haftalık/Aylık/Apple Calendar)
     case calendar
     
@@ -38,6 +41,8 @@ enum SidebarItem: Hashable {
             return "Tüm Görevler"
         case .dashboard(let dashboard):
             return dashboard.name
+        case .folder(let folder):
+            return folder.name
         case .calendar:
             return "Takvim"
         case .statistics:
@@ -54,6 +59,8 @@ enum SidebarItem: Hashable {
             return "tray.full.fill"
         case .dashboard(let dashboard):
             return dashboard.icon
+        case .folder(let folder):
+            return folder.icon
         case .calendar:
             return "calendar"
         case .statistics:
@@ -72,6 +79,9 @@ enum SidebarItem: Hashable {
         case .dashboard(let dashboard):
             hasher.combine("dashboard")
             hasher.combine(dashboard.id)
+        case .folder(let folder):
+            hasher.combine("folder")
+            hasher.combine(folder.id)
         case .calendar:
             hasher.combine("calendar")
         case .statistics:
@@ -86,6 +96,8 @@ enum SidebarItem: Hashable {
         case (.allTasks, .allTasks):
             return true
         case (.dashboard(let a), .dashboard(let b)):
+            return a.id == b.id
+        case (.folder(let a), .folder(let b)):
             return a.id == b.id
         case (.calendar, .calendar):
             return true

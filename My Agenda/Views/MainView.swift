@@ -185,6 +185,9 @@ struct MainView: View {
         case .dashboard(let dashboard):
             DashboardDetailView(dashboard: dashboard, selectedTask: $selectedTask)
             
+        case .folder(let folder):
+            FolderDetailView(folder: folder, selectedTask: $selectedTask)
+            
         case .calendar:
             CalendarView(selectedTask: $selectedTask)
             

@@ -37,6 +37,7 @@ struct SidebarView: View {
     @State private var dashboardToRename: Dashboard?
     @State private var renameText = ""
     @State private var hoveredItem: SidebarItem?
+    @State private var expandedDashboards: Set<UUID> = []
     
     // MARK: - Body
     
@@ -91,7 +92,17 @@ struct SidebarView: View {
                     .padding(.top, 8)
                     
                     ForEach(dashboards) { dashboard in
-                        dashboardButton(dashboard)
+                        VStack(spacing: 2) {
+                            dashboardButton(dashboard)
+                            
+                            // Klasörler (genişletilmişse)
+                            if expandedDashboards.contains(dashboard.id) {
+                                let sortedFolders = dashboard.folders.sorted { $0.sortIndex < $1.sortIndex }
+                                ForEach(sortedFolders) { folder in
+                                    folderButton(folder, dashboardColor: Color(hex: dashboard.colorHex))
+                                }
+                            }
+                        }
                     }
                     
                     // ─── Araçlar ───
@@ -321,17 +332,46 @@ struct SidebarView: View {
         let isSelected = selectedItem == item
         let isHovered = hoveredItem == item
         let color = Color(hex: dashboard.colorHex)
+        let hasFolders = !dashboard.folders.isEmpty
+        let isExpanded = expandedDashboards.contains(dashboard.id)
         
-        return Button {
-            withAnimation(.easeInOut(duration: 0.15)) {
-                selectedItem = item
+        return HStack(spacing: 0) {
+            // Genişletme oku (klasör varsa)
+            if hasFolders {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        if isExpanded {
+                            expandedDashboards.remove(dashboard.id)
+                        } else {
+                            expandedDashboards.insert(dashboard.id)
+                        }
+                    }
+                } label: {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 16, height: 16)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            } else {
+                Spacer()
+                    .frame(width: 16)
             }
-        } label: {
-            dashboardButtonContent(dashboard: dashboard, isSelected: isSelected, isHovered: isHovered, color: color)
-                .contentShape(Rectangle())
+            
+            // Dashboard butonu
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    selectedItem = item
+                }
+            } label: {
+                dashboardButtonContent(dashboard: dashboard, isSelected: isSelected, isHovered: isHovered, color: color)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 8)
+        .padding(.leading, 8)
+        .padding(.trailing, 8)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.1)) {
                 hoveredItem = hovering ? item : nil
@@ -344,6 +384,20 @@ struct SidebarView: View {
                 isShowingRenameAlert = true
             } label: {
                 Label("Yeniden Adlandır", systemImage: "pencil")
+            }
+            
+            if hasFolders {
+                Button {
+                    withAnimation {
+                        if isExpanded {
+                            expandedDashboards.remove(dashboard.id)
+                        } else {
+                            expandedDashboards.insert(dashboard.id)
+                        }
+                    }
+                } label: {
+                    Label(isExpanded ? "Klasörleri Gizle" : "Klasörleri Göster", systemImage: isExpanded ? "folder.badge.minus" : "folder.badge.plus")
+                }
             }
             
             Divider()
@@ -408,6 +462,70 @@ struct SidebarView: View {
                     .clear
                 )
         )
+    }
+    
+    // MARK: - Folder Button
+    
+    private func folderButton(_ folder: DashboardFolder, dashboardColor: Color) -> some View {
+        let item = SidebarItem.folder(folder)
+        let isSelected = selectedItem == item
+        let isHovered = hoveredItem == item
+        let color = Color(hex: folder.colorHex)
+        
+        return Button {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                selectedItem = item
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: folder.icon)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(isSelected ? .white : color)
+                    .frame(width: 22, height: 22)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(isSelected ? color : color.opacity(0.12))
+                    )
+                
+                Text(folder.name)
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular, design: .rounded))
+                    .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.7))
+                    .lineLimit(1)
+                
+                Spacer()
+                
+                if folder.pendingTaskCount > 0 {
+                    Text("\(folder.pendingTaskCount)")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(isSelected ? .primary : .secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(
+                            Capsule()
+                                .fill(isSelected ? .white.opacity(0.2) : .primary.opacity(0.06))
+                        )
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(
+                        isSelected ? color.opacity(0.15) :
+                        isHovered ? .primary.opacity(0.04) :
+                        .clear
+                    )
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.leading, 36) // Dashboard'un altında girintili
+        .padding(.trailing, 8)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.1)) {
+                hoveredItem = hovering ? item : nil
+            }
+        }
     }
     
     // MARK: - Footer

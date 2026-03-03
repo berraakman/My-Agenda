@@ -11,6 +11,7 @@ import SwiftData
 // MARK: - DashboardDetailView
 /// Seçili dashboard'un içeriğini gösterir.
 /// Üstte ilerleme kartı, altta görev listesi yer alır.
+/// Klasör varsa klasörlere göre gruplandırılmış, yoksa normal flat liste gösterilir.
 /// Görev ekleme, filtreleme, toplu işlem ve dashboard düzenleme işlemleri yapılabilir.
 struct DashboardDetailView: View {
     
@@ -31,6 +32,8 @@ struct DashboardDetailView: View {
     
     @State private var isShowingAddTask = false
     @State private var isShowingEditDashboard = false
+    @State private var isShowingAddFolder = false
+    @State private var editingFolder: DashboardFolder?
     @State private var filterOption: TaskFilterOption = .all
     @State private var sortOption: TaskSortOption = .custom
     @State private var searchText = ""
@@ -39,6 +42,31 @@ struct DashboardDetailView: View {
     @State private var isSelectionMode = false
     @State private var selectedTasks: Set<AgendaTask> = []
     @State private var isCompletedExpanded = true
+    
+    /// Açık/kapalı klasörler
+    @State private var expandedFolders: Set<UUID> = []
+    
+    // MARK: - Computed
+    
+    /// Dashboard'un sıralı klasörleri
+    private var sortedFolders: [DashboardFolder] {
+        dashboard.folders.sorted { $0.sortIndex < $1.sortIndex }
+    }
+    
+    /// Dashboard'un klasörleri var mı?
+    private var hasFolders: Bool {
+        !dashboard.folders.isEmpty
+    }
+    
+    /// Klasörsüz (genel) görevler
+    private var unfolderedTasks: [AgendaTask] {
+        filteredTasks.filter { $0.folder == nil }
+    }
+    
+    /// Bir klasöre ait filtrelenmiş görevler
+    private func tasksForFolder(_ folder: DashboardFolder) -> [AgendaTask] {
+        filteredTasks.filter { $0.folder?.id == folder.id }
+    }
     
     // MARK: - Body
     
@@ -64,7 +92,7 @@ struct DashboardDetailView: View {
             Divider()
             
             // Görev listesi
-            if filteredTasks.isEmpty {
+            if filteredTasks.isEmpty && sortedFolders.isEmpty {
                 EmptyStateView(
                     icon: "tray",
                     title: "Henüz görev yok",
@@ -75,40 +103,13 @@ struct DashboardDetailView: View {
             } else {
                 if isSelectionMode {
                     // Seçim modu
-                    ScrollView {
-                        LazyVStack(spacing: 4) {
-                            ForEach(filteredTasks) { task in
-                                selectableTaskRow(task)
-                            }
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                    }
+                    selectionModeList
+                } else if hasFolders {
+                    // ── Klasörlü Görünüm ──
+                    folderedList
                 } else {
-                    // Normal mod — sectioned list
-                    List(selection: $selectedTask) {
-                        // ── Bekleyen Görevler ──
-                        if !pendingFilteredTasks.isEmpty {
-                            Section {
-                                ForEach(pendingFilteredTasks) { task in
-                                    dashboardTaskRow(task)
-                                }
-                                .onMove(perform: movePendingTask)
-                            }
-                        }
-                        
-                        // ── Tamamlanan Görevler ──
-                        if !completedFilteredTasks.isEmpty {
-                            Section {
-                                ForEach(completedFilteredTasks) { task in
-                                    dashboardTaskRow(task)
-                                }
-                            } header: {
-                                completedSectionHeader
-                            }
-                        }
-                    }
-                    .listStyle(.inset)
+                    // ── Normal Görünüm (klasör yok) ──
+                    normalList
                 }
             }
         }
@@ -120,6 +121,24 @@ struct DashboardDetailView: View {
             ToolbarItemGroup(placement: .automatic) {
                 // Sıralama menüsü
                 sortMenu
+                
+                // Klasör ekle
+                Menu {
+                    Button {
+                        isShowingAddFolder = true
+                    } label: {
+                        Label("Klasör Ekle", systemImage: "folder.badge.plus")
+                    }
+                    
+                    Button {
+                        isShowingAddTask = true
+                    } label: {
+                        Label("Görev Ekle", systemImage: "plus")
+                    }
+                } label: {
+                    Label("Ekle", systemImage: "plus")
+                }
+                .help("Yeni Ekle")
                 
                 // Toplu seçim modu toggle
                 Button {
@@ -147,17 +166,16 @@ struct DashboardDetailView: View {
                     Label("Düzenle", systemImage: "pencil")
                 }
                 .help("Dashboard'u Düzenle")
-                
-                Button {
-                    isShowingAddTask = true
-                } label: {
-                    Label("Görev Ekle", systemImage: "plus")
-                }
-                .help("Yeni Görev Ekle")
             }
         }
         .sheet(isPresented: $isShowingAddTask) {
             TaskFormView(dashboard: dashboard)
+        }
+        .sheet(isPresented: $isShowingAddFolder) {
+            FolderFormView(dashboard: dashboard)
+        }
+        .sheet(item: $editingFolder) { folder in
+            FolderFormView(dashboard: dashboard, folder: folder)
         }
         .sheet(isPresented: $isShowingEditDashboard) {
             DashboardFormView(dashboard: dashboard) { name, icon, colorHex in
@@ -170,6 +188,259 @@ struct DashboardDetailView: View {
             if !newValue {
                 selectedTasks.removeAll()
             }
+        }
+        .onAppear {
+            // Başlangıçta tüm klasörleri açık olarak ayarla
+            expandedFolders = Set(dashboard.folders.map { $0.id })
+        }
+    }
+    
+    // MARK: - Normal List (Klasör yok)
+    
+    private var normalList: some View {
+        List(selection: $selectedTask) {
+            // ── Bekleyen Görevler ──
+            if !pendingFilteredTasks.isEmpty {
+                Section {
+                    ForEach(pendingFilteredTasks) { task in
+                        dashboardTaskRow(task)
+                    }
+                    .onMove(perform: movePendingTask)
+                }
+            }
+            
+            // ── Tamamlanan Görevler ──
+            if !completedFilteredTasks.isEmpty {
+                Section {
+                    ForEach(completedFilteredTasks) { task in
+                        dashboardTaskRow(task)
+                    }
+                } header: {
+                    completedSectionHeader
+                }
+            }
+        }
+        .listStyle(.inset)
+    }
+    
+    // MARK: - Foldered List (Klasörler var)
+    
+    private var folderedList: some View {
+        List(selection: $selectedTask) {
+            // ── Klasörler ──
+            ForEach(sortedFolders) { folder in
+                let folderTasks = tasksForFolder(folder)
+                let folderPending = folderTasks.filter { !$0.isCompleted }
+                let folderCompleted = folderTasks.filter { $0.isCompleted }
+                let isExpanded = expandedFolders.contains(folder.id)
+                
+                Section {
+                    if isExpanded {
+                        // Bekleyen görevler
+                        ForEach(folderPending) { task in
+                            dashboardTaskRow(task)
+                                .draggable(task.id.uuidString)
+                        }
+                        .onMove { source, destination in
+                            moveFolderTask(folder: folder, from: source, to: destination)
+                        }
+                        
+                        // Tamamlanan görevler (varsa)
+                        if !folderCompleted.isEmpty {
+                            DisclosureGroup {
+                                ForEach(folderCompleted) { task in
+                                    dashboardTaskRow(task)
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.green)
+                                    Text("Tamamlandı (\(folderCompleted.count))")
+                                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        
+                        // Klasöre görev yoksam mesaj
+                        if folderTasks.isEmpty {
+                            Text("Bu klasörde görev yok")
+                                .font(.system(size: 13, design: .rounded))
+                                .foregroundStyle(.tertiary)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, 8)
+                        }
+                    }
+                } header: {
+                    folderSectionHeader(folder: folder, taskCount: folderTasks.count, isExpanded: isExpanded)
+                        .dropDestination(for: String.self) { droppedItems, _ in
+                            for idString in droppedItems {
+                                if let uuid = UUID(uuidString: idString),
+                                   let task = findTask(by: uuid) {
+                                    withAnimation {
+                                        task.folder = folder
+                                    }
+                                }
+                            }
+                            return true
+                        } isTargeted: { isTargeted in
+                            // Görsel geri bildirim için ek state eklenebilir
+                        }
+                }
+            }
+            
+            // ── Klasörsüz (Genel) Görevler ──
+            if !unfolderedTasks.isEmpty {
+                let generalPending = unfolderedTasks.filter { !$0.isCompleted }
+                let generalCompleted = unfolderedTasks.filter { $0.isCompleted }
+                
+                Section {
+                    ForEach(generalPending) { task in
+                        dashboardTaskRow(task)
+                            .draggable(task.id.uuidString)
+                    }
+                    .onMove(perform: movePendingTask)
+                    
+                    if !generalCompleted.isEmpty {
+                        DisclosureGroup {
+                            ForEach(generalCompleted) { task in
+                                dashboardTaskRow(task)
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.green)
+                                Text("Tamamlandı (\(generalCompleted.count))")
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                } header: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "tray.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color(hex: dashboard.colorHex))
+                        
+                        Text("Genel")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
+                        
+                        Text("\(unfolderedTasks.count)")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color(hex: dashboard.colorHex))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .fill(Color(hex: dashboard.colorHex).opacity(0.12))
+                            )
+                        
+                        Spacer()
+                    }
+                    .dropDestination(for: String.self) { droppedItems, _ in
+                        for idString in droppedItems {
+                            if let uuid = UUID(uuidString: idString),
+                               let task = findTask(by: uuid) {
+                                withAnimation {
+                                    task.folder = nil
+                                }
+                            }
+                        }
+                        return true
+                    } isTargeted: { _ in }
+                }
+            }
+        }
+        .listStyle(.inset)
+    }
+    
+    // MARK: - Folder Section Header
+    
+    private func folderSectionHeader(folder: DashboardFolder, taskCount: Int, isExpanded: Bool) -> some View {
+        HStack(spacing: 8) {
+            // Aç/kapa toggle
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    if expandedFolders.contains(folder.id) {
+                        expandedFolders.remove(folder.id)
+                    } else {
+                        expandedFolders.insert(folder.id)
+                    }
+                }
+            } label: {
+                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            
+            // Klasör ikonu
+            Image(systemName: folder.icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color(hex: folder.colorHex))
+            
+            // Klasör adı
+            Text(folder.name)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+            
+            // Görev sayısı
+            Text("\(taskCount)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(Color(hex: folder.colorHex))
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule()
+                        .fill(Color(hex: folder.colorHex).opacity(0.12))
+                )
+            
+            Spacer()
+            
+            // Klasör işlemleri
+            Menu {
+                Button {
+                    editingFolder = folder
+                } label: {
+                    Label("Düzenle", systemImage: "pencil")
+                }
+                
+                Divider()
+                
+                Button(role: .destructive) {
+                    withAnimation {
+                        // Klasördeki görevleri klasörsüz yap
+                        for task in folder.tasks {
+                            task.folder = nil
+                        }
+                        modelContext.delete(folder)
+                    }
+                } label: {
+                    Label("Klasörü Sil", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
+    // MARK: - Selection Mode List
+    
+    private var selectionModeList: some View {
+        ScrollView {
+            LazyVStack(spacing: 4) {
+                ForEach(filteredTasks) { task in
+                    selectableTaskRow(task)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
         }
     }
     
@@ -217,6 +488,16 @@ struct DashboardDetailView: View {
                         Label(dueDate.shortFormatted, systemImage: "calendar")
                             .font(.system(size: 11, design: .rounded))
                             .foregroundStyle(task.isOverdue ? .red : .secondary)
+                    }
+                    
+                    if let folder = task.folder {
+                        HStack(spacing: 3) {
+                            Image(systemName: folder.icon)
+                                .font(.system(size: 9))
+                            Text(folder.name)
+                                .font(.system(size: 11, design: .rounded))
+                        }
+                        .foregroundStyle(Color(hex: folder.colorHex).opacity(0.7))
                     }
                     
                     if task.isCompleted {
@@ -291,9 +572,38 @@ struct DashboardDetailView: View {
                 Label("Düzenle", systemImage: "pencil")
             }
             
+            // Klasör taşıma
+            if hasFolders {
+                Menu {
+                    Button {
+                        task.folder = nil
+                    } label: {
+                        HStack {
+                            Image(systemName: "tray.fill")
+                            Text("Genel (Klasörsüz)")
+                        }
+                    }
+                    
+                    ForEach(sortedFolders) { folder in
+                        Button {
+                            task.folder = folder
+                        } label: {
+                            HStack {
+                                Image(systemName: folder.icon)
+                                Text(folder.name)
+                            }
+                        }
+                    }
+                } label: {
+                    Label("Klasöre Taşı", systemImage: "folder")
+                }
+            }
+            
+            // Dashboard taşıma
             Menu {
                 Button {
                     task.dashboard = nil
+                    task.folder = nil
                 } label: {
                     Text("Hiçbiri")
                 }
@@ -301,6 +611,7 @@ struct DashboardDetailView: View {
                 ForEach(dashboards) { d in
                     Button {
                         task.dashboard = d
+                        task.folder = nil
                     } label: {
                         HStack {
                             Image(systemName: d.icon)
@@ -309,7 +620,7 @@ struct DashboardDetailView: View {
                     }
                 }
             } label: {
-                Label("Taşı", systemImage: "folder")
+                Label("Dashboard'a Taşı", systemImage: "square.grid.2x2")
             }
             
             Divider()
@@ -419,20 +730,31 @@ struct DashboardDetailView: View {
     
     /// Bekleyen görevlerin sırasını sürükle-bırak ile değiştirir
     private func movePendingTask(from source: IndexSet, to destination: Int) {
-        // Sürükleme yapıldığında otomatik olarak özel sıralamaya geç
         sortOption = .custom
         
-        var pending = pendingFilteredTasks
+        var pending = pendingFilteredTasks.filter { $0.folder == nil }
         pending.move(fromOffsets: source, toOffset: destination)
         
         for (index, task) in pending.enumerated() {
             task.sortIndex = index
         }
+    }
+    
+    /// Klasör içindeki görevleri sürükle-bırak ile değiştirir
+    private func moveFolderTask(folder: DashboardFolder, from source: IndexSet, to destination: Int) {
+        sortOption = .custom
         
-        let completedTasks = completedFilteredTasks
-        for (index, task) in completedTasks.enumerated() {
-            task.sortIndex = pending.count + index
+        var folderTasks = tasksForFolder(folder).filter { !$0.isCompleted }
+        folderTasks.move(fromOffsets: source, toOffset: destination)
+        
+        for (index, task) in folderTasks.enumerated() {
+            task.sortIndex = index
         }
+    }
+    
+    /// UUID ile görev bulma (drag & drop için)
+    private func findTask(by id: UUID) -> AgendaTask? {
+        dashboard.tasks.first { $0.id == id }
     }
     
     // MARK: - Sort Menu
@@ -572,5 +894,5 @@ enum TaskFilterOption: String, CaseIterable, Identifiable {
 #Preview {
     let dashboard = Dashboard(name: "Teknofest", icon: "trophy.fill", colorHex: "#FF9500")
     return DashboardDetailView(dashboard: dashboard, selectedTask: .constant(nil))
-        .modelContainer(for: [Dashboard.self, AgendaTask.self], inMemory: true)
+        .modelContainer(for: [Dashboard.self, AgendaTask.self, DashboardFolder.self], inMemory: true)
 }

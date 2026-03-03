@@ -42,6 +42,11 @@ final class Dashboard {
     @Relationship(deleteRule: .cascade, inverse: \AgendaTask.dashboard)
     var tasks: [AgendaTask]
     
+    /// Bu dashboard'a ait klasörler.
+    /// Dashboard silindiğinde tüm klasörler de silinir (cascade).
+    @Relationship(deleteRule: .cascade, inverse: \DashboardFolder.dashboard)
+    var folders: [DashboardFolder] = []
+    
     // MARK: - Initializer
     
     init(

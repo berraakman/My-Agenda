@@ -82,6 +82,10 @@ final class AgendaTask {
     /// nil ise görev herhangi bir dashboard'a atanmamış demektir.
     var dashboard: Dashboard?
     
+    /// Görevin ait olduğu klasör (dashboard içindeki alt kategori).
+    /// nil ise görev herhangi bir klasöre atanmamış demektir.
+    var folder: DashboardFolder?
+    
     // MARK: - Initializer
     
     init(
